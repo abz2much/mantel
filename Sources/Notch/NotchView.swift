@@ -69,10 +69,9 @@ struct NotchView: View {
                 .frame(minWidth: 460)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background {
-                    // Soft wash of the meeting's calendar colour, so work and personal meetings read differently.
-                    RadialGradient(colors: [(event.calendarColor.map(Color.init) ?? .clear).opacity(0.22), .clear],
-                                   center: .leading, startRadius: 0, endRadius: 280)
+                .background(alignment: .leading) {
+                    // The meeting's calendar colour, so work and personal meetings read differently.
+                    ColourWash(colour: event.calendarColor.map(Color.init), centreX: 12 + 20)   // centred on the ring
                 }
                 .environment(\.colorScheme, .dark)
                 .scaleEffect(appeared ? 1 : 0.9)

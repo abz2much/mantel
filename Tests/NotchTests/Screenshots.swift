@@ -1,0 +1,69 @@
+import AppKit
+import SwiftUI
+import Testing
+@testable import Notch
+
+/// Renders README screenshots with made-up data. Skipped unless asked for:
+///   NOTCH_FAKE_SPOTIFY=1 NOTCH_SCREENSHOTS_DIR=docs/images swift test --filter Screenshots
+@MainActor
+@Suite(.enabled(if: ProcessInfo.processInfo.environment["NOTCH_SCREENSHOTS_DIR"] != nil))
+struct Screenshots {
+    private let dir = URL(fileURLWithPath: ProcessInfo.processInfo.environment["NOTCH_SCREENSHOTS_DIR"] ?? ".")
+
+    @Test func musicCard() throws {
+        let spotify = playingSpotify()
+        try save(notchShape(MusicCardView(spotify: spotify)), as: "music-card.png")
+    }
+
+    @Test func compact() throws {
+        let spotify = playingSpotify()
+        let view = HStack(spacing: 0) {
+            MusicCompactLeading(spotify: spotify).frame(width: 40)
+            Color.black.frame(width: 190)   // the notch itself
+            MusicCompactTrailing(spotify: spotify).frame(width: 40)
+        }
+        .frame(height: 32)
+        .background(UnevenRoundedRectangle(bottomLeadingRadius: 12, bottomTrailingRadius: 12).fill(.black))
+        .environment(\.colorScheme, .dark)
+        .padding(24)
+        try save(view, as: "compact.png")
+    }
+
+    @Test func meeting() throws {
+        let state = NotchState()
+        state.event = MeetingEvent(
+            id: "demo", title: "Design review", start: Date().addingTimeInterval(42),
+            link: MeetingLink(url: URL(string: "https://zoom.us/j/123456789")!, source: .location, provider: "Zoom"),
+            calendarTitle: "Work", attendeeCount: 6, isDeclined: false,
+            calendarColor: RGB(r: 0.25, g: 0.55, b: 1.0))
+        state.showMeeting = true
+        try save(notchShape(NotchView(state: state, onJoin: { _ in }, onDismiss: {})), as: "meeting.png")
+    }
+
+    private func playingSpotify() -> SpotifyService {
+        let spotify = SpotifyService()
+        spotify.showAlbumArt = true
+        spotify.refresh()
+        spotify.seek(to: 84)
+        return spotify
+    }
+
+    /// Black notch-like backing (square top, rounded bottom), masked like the real notch.
+    private func notchShape(_ content: some View) -> some View {
+        content
+            .padding(.horizontal, 18)
+            .padding(.top, 34)   // room the real notch leaves at the top
+            .padding(.bottom, 14)
+            .background(.black)
+            .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 28, bottomTrailingRadius: 28))   // as DynamicNotchKit masks it
+            .padding(24)
+    }
+
+    private func save(_ view: some View, as name: String) throws {
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 2
+        let image = try #require(renderer.cgImage)
+        let png = try #require(NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]))
+        try png.write(to: dir.appendingPathComponent(name))
+    }
+}

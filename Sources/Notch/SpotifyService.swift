@@ -91,7 +91,7 @@ final class SpotifyService: ObservableObject {
     private var pauseTimer: Timer?
     private var positionTimer: Timer?
     private var artworkTask: Task<Void, Never>?
-    private var fakeTrack = TrackInfo(state: .playing, title: "Test Track", artist: "Test Artist", duration: 215, artworkURL: nil)
+    private var fakeTrack = TrackInfo(state: .playing, title: "Neon Afternoon", artist: "The Placeholders", duration: 215, artworkURL: nil)
 
     init() {
         let defaults = UserDefaults.standard
@@ -166,7 +166,7 @@ final class SpotifyService: ObservableObject {
 
     func refresh() {
         guard musicEnabled, isRunning else { clear(); return }
-        if Self.fake { update(fakeTrack); return }
+        if Self.fake { update(fakeTrack); updateArtwork(); return }
         // One read at a time; a request that arrives mid-read triggers one more read afterwards.
         guard !refreshing else { refreshAgain = true; return }
         refreshing = true
@@ -288,8 +288,21 @@ final class SpotifyService: ObservableObject {
 
     // MARK: Album art (opt-in)
 
+    /// Fake mode's cover: a generated gradient, so the glow and accents can be seen without Spotify.
+    private static let fakeCover = NSImage(size: NSSize(width: 300, height: 300), flipped: false) { rect in
+        NSGradient(colors: [NSColor(srgbRed: 0.98, green: 0.45, blue: 0.2, alpha: 1),
+                            NSColor(srgbRed: 0.85, green: 0.15, blue: 0.45, alpha: 1)])?.draw(in: rect, angle: -45)
+        NSColor(white: 1, alpha: 0.85).setFill()
+        NSBezierPath(ovalIn: rect.insetBy(dx: 95, dy: 95)).fill()
+        return true
+    }
+
     private func updateArtwork() {
         artworkTask?.cancel()
+        if Self.fake {
+            withAnimation(.easeInOut(duration: 0.4)) { artwork = showAlbumArt && track != nil ? Self.fakeCover : nil }
+            return
+        }
         guard showAlbumArt, let url = track?.artworkURL, AlbumArtLoader.isAllowed(url) else {
             withAnimation(.easeInOut(duration: 0.4)) { artwork = nil }
             return
