@@ -25,10 +25,8 @@ struct MusicCardView: View {
             .frame(width: 380)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background {
-                // Soft wash of the artwork's colour behind the cover.
-                RadialGradient(colors: [(spotify.accent ?? .clear).opacity(0.25), .clear],
-                               center: .leading, startRadius: 0, endRadius: 260)
+            .background(alignment: .leading) {
+                ColourWash(colour: spotify.accent, centreX: 12 + 36)   // centred on the cover
             }
             .animation(.easeInOut(duration: 0.6), value: spotify.accent)
             .environment(\.colorScheme, .dark)

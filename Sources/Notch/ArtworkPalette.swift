@@ -75,3 +75,20 @@ extension Color {
         self.init(.sRGB, red: rgb.r, green: rgb.g, blue: rgb.b)
     }
 }
+
+/// A soft oval of colour that fades to nothing inside its own bounds, so it never shows a hard edge.
+struct ColourWash: View {
+    let colour: Color?
+    /// Horizontal centre of the wash, measured from the leading edge of the view it sits behind.
+    let centreX: CGFloat
+
+    private static let size = CGSize(width: 260, height: 160)
+
+    var body: some View {
+        EllipticalGradient(colors: [(colour ?? .clear).opacity(0.28), .clear],
+                           center: .center, startRadiusFraction: 0, endRadiusFraction: 0.5)
+            .frame(width: Self.size.width, height: Self.size.height)
+            .offset(x: centreX - Self.size.width / 2)
+            .allowsHitTesting(false)
+    }
+}
