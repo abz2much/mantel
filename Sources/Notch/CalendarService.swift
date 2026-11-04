@@ -6,6 +6,7 @@ struct MeetingEvent: Equatable, Identifiable {
     let id: String          // stable per occurrence (recurring events share eventIdentifier)
     let title: String
     let start: Date
+    let end: Date
     let link: MeetingLink?
     let calendarTitle: String
     let attendeeCount: Int
@@ -83,13 +84,15 @@ final class CalendarService: ObservableObject {
         let from = now.addingTimeInterval(-60)  // keep just-started events for the overrun display
         let predicate = store.predicateForEvents(withStart: from, end: now.addingTimeInterval(24 * 3600), calendars: tracked)
         events = store.events(matching: predicate)
-            .filter { !$0.isAllDay && $0.status != .canceled && $0.startDate > from }
+            // Upcoming and just-started events for reminders, plus in-progress ones for the agenda's "Now".
+            .filter { !$0.isAllDay && $0.status != .canceled && ($0.startDate > from || $0.endDate > now) }
             .sorted { $0.startDate < $1.startDate }
             .map { event in
                 MeetingEvent(
                     id: "\(event.eventIdentifier ?? event.title ?? "?")|\(event.startDate.timeIntervalSince1970)",
                     title: event.title ?? "Untitled event",
                     start: event.startDate,
+                    end: event.endDate,
                     link: MeetingLinkDetector.detect(url: event.url, location: event.location, notes: event.notes),
                     calendarTitle: event.calendar.title,
                     attendeeCount: event.attendees?.count ?? 0,

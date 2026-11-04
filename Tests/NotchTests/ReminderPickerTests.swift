@@ -9,6 +9,7 @@ private func meeting(_ id: String, startsIn seconds: TimeInterval, declined: Boo
         id: id,
         title: "Meeting \(id)",
         start: now.addingTimeInterval(seconds),
+        end: now.addingTimeInterval(seconds + 1800),
         link: nil,
         calendarTitle: "Work",
         attendeeCount: 2,

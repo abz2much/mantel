@@ -129,13 +129,15 @@ struct MusicCardView: View {
     }
 }
 
-/// Compact-state indicators shown either side of the notch while Spotify is active.
+/// Compact-state indicators shown either side of the notch while Spotify is active; empty when idle.
 struct MusicCompactLeading: View {
     @ObservedObject var spotify: SpotifyService
 
     var body: some View {
         // A tiny cover when album art is on; the music note otherwise.
-        if spotify.showAlbumArt, let art = spotify.artwork {
+        if !spotify.showsCard {
+            EmptyView()
+        } else if spotify.showAlbumArt, let art = spotify.artwork {
             Image(nsImage: art)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
@@ -156,6 +158,12 @@ struct MusicCompactTrailing: View {
 
     var body: some View {
         let playing = spotify.track?.state == .playing
+        if spotify.showsCard {
+            indicator(playing: playing)
+        }
+    }
+
+    private func indicator(playing: Bool) -> some View {
         Image(systemName: playing ? "waveform" : "pause.fill")
             .font(.system(size: 11, weight: .bold))
             .foregroundStyle(playing ? spotify.accent ?? .green : .secondary)
@@ -163,17 +171,21 @@ struct MusicCompactTrailing: View {
     }
 }
 
-/// Expanded content: a meeting popup always takes precedence over the music card.
+/// Expanded content, chosen by `NotchController`: meeting popup, music card, or the idle panel.
 struct NotchRootView: View {
     @ObservedObject var state: NotchState
     @ObservedObject var spotify: SpotifyService
+    @ObservedObject var calendar: CalendarService
     let onJoin: (URL) -> Void
     let onDismiss: () -> Void
 
     var body: some View {
-        if state.showMeeting, state.event != nil {
+        switch state.content {
+        case .meeting where state.event != nil:
             NotchView(state: state, onJoin: onJoin, onDismiss: onDismiss)
-        } else {
+        case .idle:
+            IdlePanelView(events: calendar.events, calendarAccess: calendar.hasAccess, spotify: spotify, onJoin: onJoin)
+        default:
             MusicCardView(spotify: spotify)
         }
     }

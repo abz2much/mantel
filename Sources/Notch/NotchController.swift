@@ -6,11 +6,14 @@ import os
 
 @MainActor
 final class NotchState: ObservableObject {
+    /// What the expanded notch shows.
+    enum Content { case meeting, music, idle }
+
     @Published var event: MeetingEvent?
-    @Published var showMeeting = false
+    @Published var content: Content = .music
 }
 
-/// Decides what the notch shows (meeting > music > nothing) and drives it.
+/// Decides what the notch shows (meeting > music > idle) and drives it.
 @MainActor
 final class NotchController {
     private static let hoverDwell: TimeInterval = 0.3
@@ -19,7 +22,7 @@ final class NotchController {
 
     private static let log = Logger(subsystem: "local.notch.app", category: "notch")
 
-    private enum Mode: Equatable { case hidden, musicCompact, musicExpanded, meeting }
+    private enum Mode: Equatable { case hidden, musicCompact, musicExpanded, idle, idleExpanded, meeting }
 
     private let calendar: CalendarService
     private let spotify: SpotifyService
@@ -60,6 +63,7 @@ final class NotchController {
                 NotchRootView(
                     state: state,
                     spotify: spotify,
+                    calendar: calendar,
                     onJoin: { [weak self] url in
                         NSWorkspace.shared.open(url)
                         self?.dismissCurrent()
@@ -98,7 +102,7 @@ final class NotchController {
         hoverTimer?.invalidate()
         hoverTimer = nil
         if hovering {
-            guard desired == .musicCompact else { return }
+            guard desired == .musicCompact || desired == .idle else { return }
             hoverTimer = Timer.scheduledTimer(withTimeInterval: Self.hoverDwell, repeats: false) { [weak self] _ in
                 MainActor.assumeIsolated {
                     guard let self, self.notch?.isHovering == true else { return }
@@ -126,7 +130,6 @@ final class NotchController {
 
         if let target {
             state.event = target.event   // keeps title/link fresh after refetches
-            state.showMeeting = true
             currentReminder = target.key
             hoverExpanded = false
             desired = .meeting
@@ -138,6 +141,9 @@ final class NotchController {
                 } else {
                     desired = (peekUntil ?? .distantPast) > now ? .musicExpanded : .hidden
                 }
+            } else if Self.targetScreen().hasNotchInset {
+                // Idle: keep an empty compact notch so hovering it can open today's agenda.
+                desired = hoverExpanded ? .idleExpanded : .idle
             } else {
                 hoverExpanded = false
                 desired = .hidden
@@ -166,11 +172,16 @@ final class NotchController {
         let screen = Self.targetScreen()
         switch mode {
         case .hidden: await notch?.hide()
-        case .musicCompact: await notch?.compact(on: screen)
+        case .musicCompact, .idle: await notch?.compact(on: screen)
         case .musicExpanded:
-            state.showMeeting = false
+            state.content = .music
             await notch?.expand(on: screen)
-        case .meeting: await notch?.expand(on: screen)
+        case .idleExpanded:
+            state.content = .idle
+            await notch?.expand(on: screen)
+        case .meeting:
+            state.content = .meeting
+            await notch?.expand(on: screen)
         }
     }
 
