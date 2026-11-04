@@ -33,11 +33,31 @@ struct Screenshots {
         let state = NotchState()
         state.event = MeetingEvent(
             id: "demo", title: "Design review", start: Date().addingTimeInterval(42),
+            end: Date().addingTimeInterval(42 + 1800),
             link: MeetingLink(url: URL(string: "https://zoom.us/j/123456789")!, source: .location, provider: "Zoom"),
             calendarTitle: "Work", attendeeCount: 6, isDeclined: false,
             calendarColor: RGB(r: 0.25, g: 0.55, b: 1.0))
-        state.showMeeting = true
+        state.content = .meeting
         try save(notchShape(NotchView(state: state, onJoin: { _ in }, onDismiss: {})), as: "meeting.png")
+    }
+
+    @Test func idlePanel() throws {
+        func meeting(_ title: String, in minutes: Double, lasts: Double = 30, colour: RGB, zoom: Bool = false) -> MeetingEvent {
+            let start = Date().addingTimeInterval(minutes * 60)
+            return MeetingEvent(
+                id: title, title: title, start: start, end: start.addingTimeInterval(lasts * 60),
+                link: zoom ? MeetingLink(url: URL(string: "https://zoom.us/j/123456789")!, source: .location, provider: "Zoom") : nil,
+                calendarTitle: "Work", attendeeCount: 4, isDeclined: false, calendarColor: colour)
+        }
+        let work = RGB(r: 0.25, g: 0.55, b: 1.0), personal = RGB(r: 0.3, g: 0.8, b: 0.4)
+        let events = [
+            meeting("Team standup", in: -10, colour: work, zoom: true),
+            meeting("Design review", in: 80, colour: work, zoom: true),
+            meeting("Lunch with Sam", in: 150, lasts: 60, colour: personal),
+            meeting("1:1", in: 240, colour: work),
+        ]
+        let view = IdlePanelView(events: events, calendarAccess: true, spotify: playingSpotify(), onJoin: { _ in })
+        try save(notchShape(view), as: "idle-panel.png")
     }
 
     private func playingSpotify() -> SpotifyService {

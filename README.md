@@ -9,6 +9,9 @@ A small macOS menu bar app that puts your next meeting and what's playing on Spo
   <img src="docs/images/meeting.png" width="560" alt="Meeting popup counting down to a Zoom call with a Join button">
 </p>
 <p align="center">
+  <img src="docs/images/idle-panel.png" width="440" alt="Panel shown when hovering the idle notch: a paused song to resume, then today's meetings">
+</p>
+<p align="center">
   <img src="docs/images/compact.png" width="320" alt="Compact view: a tiny album cover and waveform either side of the notch">
 </p>
 
@@ -37,9 +40,19 @@ A small macOS menu bar app that puts your next meeting and what's playing on Spo
 - Smooth transitions between songs; the cover sits back slightly when paused.
 - Hides itself after 2 minutes paused, and when Spotify quits.
 
+### When nothing's happening
+
+With no music playing and no meeting coming up, **hover the notch** to see:
+
+- the **paused song**, with a play button to resume it;
+- **today's meetings**: the one in progress (**Now**), the **Next** one with a countdown like "in 1h 20m", and up to three more, each with its calendar's colour and a **Join** button where there's a link;
+- "No more meetings today" when your day is done.
+
+To make this hoverable, the notch stays as a slightly wider black shape while idle.
+
 ### Without a notch
 
-On a Mac or display without a notch there's no compact view. The music card shows briefly whenever a song starts, and meeting reminders work as normal.
+On a Mac or display without a notch there's no compact view or idle panel. The music card shows briefly whenever a song starts, and meeting reminders work as normal.
 
 ## Requirements
 
