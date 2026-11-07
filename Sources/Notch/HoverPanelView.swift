@@ -31,6 +31,12 @@ struct HoverPanelView: View {
         .padding(.top, 4)
         .padding(.bottom, 8)
         .frame(width: Self.width, height: Self.contentHeight + 40, alignment: .top)
+        .background {
+            // Warm glow on every tab, except Music when the album art brings its own colour.
+            if !(state.tab == .music && music.track != nil && music.accent != nil) {
+                MantelStyle.topGlow.padding(.horizontal, -20)   // starts below the notch, which stays black
+            }
+        }
         .environment(\.colorScheme, .dark)
     }
 
@@ -46,6 +52,8 @@ struct HoverPanelView: View {
 
     private func tabButton(_ tab: HoverTab, _ title: String, _ icon: String) -> some View {
         let selected = state.tab == tab
+        // Amber, or the album art's colour on the Music tab when there is one.
+        let tint = (tab == .music ? music.accent : nil) ?? MantelStyle.amber
         return Button {
             state.tab = tab
         } label: {
@@ -53,8 +61,8 @@ struct HoverPanelView: View {
                 .font(.system(size: 11, weight: .medium))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
-                .background(Capsule().fill(selected ? .white.opacity(0.16) : .clear))
-                .foregroundStyle(selected ? .primary : .secondary)
+                .background(Capsule().fill(selected ? tint.opacity(0.22) : .clear))
+                .foregroundStyle(selected ? AnyShapeStyle(tint) : AnyShapeStyle(.secondary))
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -62,18 +70,12 @@ struct HoverPanelView: View {
 
     @ViewBuilder private var musicTab: some View {
         if !music.musicEnabled {
-            Label("Music card is off", systemImage: "music.note")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            EmptyMessage(text: "Music card is off", icon: "music.note")
         } else if music.track != nil {
             MusicCardView(music: music)
                 .padding(.horizontal, -12)   // the card brings its own padding
         } else {
-            Label("Nothing playing", systemImage: "music.note")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            EmptyMessage(text: "Nothing playing", icon: "music.note")
         }
     }
 }
@@ -148,9 +150,6 @@ struct ClipboardListView: View {
     }
 
     private func message(_ text: String, icon: String) -> some View {
-        Label(text, systemImage: icon)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        EmptyMessage(text: text, icon: icon)
     }
 }

@@ -13,14 +13,26 @@ struct TimerTabView: View {
                 Text("Start a timer").font(.caption).foregroundStyle(.secondary)
                 HStack(spacing: 8) {
                     ForEach(Self.presets, id: \.self) { minutes in
+                        let focus = minutes == Countdown.pomodoroMinutes
                         Button { timer.start(minutes: minutes) } label: {
                             VStack(spacing: 1) {
                                 Text("\(minutes)").font(.system(size: 20, weight: .semibold, design: .rounded))
-                                Text(minutes == Countdown.pomodoroMinutes ? "focus" : "min")
-                                    .font(.caption2).foregroundStyle(.secondary)
+                                Text(focus ? "focus" : "min")
+                                    .font(.caption2)
+                                    .opacity(0.7)
                             }
+                            .foregroundStyle(focus ? Color(red: 0.11, green: 0.05, blue: 0.0) : .primary)
                             .frame(width: 70, height: 54)
-                            .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.08)))
+                            .background {
+                                // The focus session stands out in Mantel's amber; the rest stay quiet.
+                                if focus {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(LinearGradient(colors: [MantelStyle.amber, MantelStyle.amberDeep],
+                                                             startPoint: .top, endPoint: .bottom))
+                                } else {
+                                    RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.07))
+                                }
+                            }
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)

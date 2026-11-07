@@ -18,13 +18,9 @@ struct TodayView: View {
     @ViewBuilder
     private func agendaSection(_ agenda: Agenda, now: Date) -> some View {
         if !calendarAccess {
-            Label("Calendar access is off", systemImage: "calendar.badge.exclamationmark")
-                .font(.caption).foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)   // centred, like the other tabs' messages
+            EmptyMessage(text: "Calendar access is off", icon: "calendar.badge.exclamationmark")
         } else if agenda.current == nil, agenda.next == nil {
-            Label("No more meetings today", systemImage: "checkmark.circle")
-                .font(.caption).foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)   // centred, like the other tabs' messages
+            EmptyMessage(text: "No more meetings today", icon: "checkmark.circle")
         } else {
             VStack(alignment: .leading, spacing: 8) {
                 if let meeting = agenda.current {
