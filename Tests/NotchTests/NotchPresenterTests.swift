@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 import Testing
 @testable import Notch
@@ -27,7 +28,7 @@ private let window = CGSize(width: 756, height: 491)
 
 @MainActor
 private func makePresenter() -> NotchPresenter<Text, EmptyView, EmptyView> {
-    NotchPresenter(expanded: { Text("panel") }, leading: { EmptyView() }, trailing: { EmptyView() }, glow: { .orange })
+    NotchPresenter(expanded: { Text("panel") }, leading: { EmptyView() }, trailing: { EmptyView() })
 }
 
 @MainActor
@@ -54,4 +55,22 @@ func presenterEndsInLatestState() async throws {
 
     await p.hide()
     #expect(p.window == nil)
+}
+
+@MainActor
+@Test func glowColourChangeRedrawsSurface() {
+    let p = makePresenter()
+    var changes = 0
+    let sub = p.objectWillChange.sink { changes += 1 }
+    p.glowColor = .red
+    #expect(changes == 1)
+    #expect(p.glowColor == .red)
+    sub.cancel()
+}
+
+@Test func glowTakesAlbumColourOnlyOnMusicPanel() {
+    #expect(NotchDecision.glowColor(content: .panel, tab: .music, accent: .red) == .red)
+    #expect(NotchDecision.glowColor(content: .panel, tab: .clipboard, accent: .red) == MantelStyle.glow)
+    #expect(NotchDecision.glowColor(content: .meeting, tab: .music, accent: .red) == MantelStyle.glow)
+    #expect(NotchDecision.glowColor(content: .panel, tab: .music, accent: nil) == MantelStyle.glow)
 }

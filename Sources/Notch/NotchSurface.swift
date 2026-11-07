@@ -53,7 +53,7 @@ struct NotchSurface<Expanded: View, Leading: View, Trailing: View>: View {
         .frame(minWidth: metrics.notchSize.width + radii.top * 2, minHeight: minHeight, alignment: .top)
         .background(Color.black)
         .clipShape(NotchShape(topRadius: radii.top, bottomRadius: radii.bottom))
-        .shadow(color: presenter.glow().opacity(presenter.glowStrength), radius: 30 - 13 * presenter.glowStrength)
+        .shadow(color: presenter.glowColor.opacity(presenter.glowStrength), radius: 30 - 13 * presenter.glowStrength)
         .shadow(color: .black.opacity(shadow.opacity), radius: shadow.radius)
         .contentShape(Rectangle())
         .onHover { presenter.setHovering($0) }

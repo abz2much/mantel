@@ -49,6 +49,7 @@ final class NotchController {
     private var hoverExpanded = false
     private var hoverTimer: Timer?
     private var hoverCancellable: AnyCancellable?
+    private var glowCancellable: AnyCancellable?
     private var peekUntil: Date?
     private var timer: Timer?
     private var batteryTimer: Timer?
@@ -93,13 +94,20 @@ final class NotchController {
                 )
             },
             leading: { [unowned self] in CompactLeading(state: state, music: music, timer: timerService) },
-            trailing: { [unowned self] in CompactTrailing(state: state, music: music, timer: timerService) },
-            // The flash and glow take the album's colour on the Music tab, as the panel's own glow does.
-            glow: { [unowned self] in
-                (state.content == .panel && state.tab == .music ? music.accent : nil) ?? MantelStyle.glow
-            }
+            trailing: { [unowned self] in CompactTrailing(state: state, music: music, timer: timerService) }
         )
         self.notch = notch
+
+        // Keeps the glow around the shape in step with the open tab and the album, which the notch's view doesn't watch.
+        glowCancellable = Publishers.CombineLatest3(state.$content, state.$tab, music.objectWillChange.prepend(()))
+            .receive(on: RunLoop.main)
+            .sink { [weak self] content, tab, _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    let colour = NotchDecision.glowColor(content: content, tab: tab, accent: self.music.accent)
+                    if self.notch?.glowColor != colour { self.notch?.glowColor = colour }
+                }
+            }
 
         // Hover state comes from the notch's view; the dwell/leave timing and expansion are ours.
         hoverCancellable = notch.$isHovering

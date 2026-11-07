@@ -36,6 +36,8 @@ final class NotchPresenter<Expanded: View, Leading: View, Trailing: View>: Obser
     @Published private(set) var metrics = NotchMetrics(notchSize: .zero, menubarHeight: 0, hasNotch: false)
     /// Strength of the coloured glow around the shape: 0.9 at the flash's peak, 0.35 while open.
     @Published private(set) var glowStrength: CGFloat = 0
+    /// Colour of that glow; the controller keeps it in step with the open tab and the album.
+    @Published var glowColor: Color = MantelStyle.glow
 
     // Measured by the view; used for the click area and centring.
     var expandedSize: CGSize = .zero
@@ -44,7 +46,6 @@ final class NotchPresenter<Expanded: View, Leading: View, Trailing: View>: Obser
     let expanded: () -> Expanded
     let leading: () -> Leading
     let trailing: () -> Trailing
-    let glow: () -> Color
 
     private(set) var window: NSPanel?
     private var screenNumber: NSNumber?
@@ -52,11 +53,10 @@ final class NotchPresenter<Expanded: View, Leading: View, Trailing: View>: Obser
     private var screenObserver: NSObjectProtocol?
 
     init(expanded: @escaping () -> Expanded, leading: @escaping () -> Leading,
-         trailing: @escaping () -> Trailing, glow: @escaping () -> Color) {
+         trailing: @escaping () -> Trailing) {
         self.expanded = expanded
         self.leading = leading
         self.trailing = trailing
-        self.glow = glow
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
         ) { [weak self] _ in
