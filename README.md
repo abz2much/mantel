@@ -92,7 +92,13 @@ If macOS says the app **is damaged and can't be opened**, run this in Terminal, 
 xattr -dr com.apple.quarantine /Applications/Notch.app
 ```
 
-To update, quit Notch, replace the app in Applications and do step 3 again.
+### Updates
+
+Once installed in Applications, Notch **updates itself**: it checks a minute after starting and every 6 hours, downloads a newer release, checks it's signed by Notch's release certificate, swaps it in and reopens. There's no Open Anyway step, and macOS keeps Notch's permissions.
+
+- The repo is private, so updates download through the **GitHub CLI** (`gh`) with your own login. Install it with Homebrew (`brew install gh`) and run `gh auth login` once.
+- Turn **Install Updates Automatically** off in the menu to only update when you choose **Check for Updates Now**.
+- Updates only start from a release signed this way (1.3.0 or later). If you're on an older version, install the latest release by hand once, as above.
 
 ### Build it yourself
 
@@ -159,7 +165,9 @@ NOTCH_FAKE_SPOTIFY=1 NOTCH_SCREENSHOTS_DIR=docs/images swift test --filter Scree
 
 ### Releasing
 
-On GitHub, open **Actions → Release → Run workflow**, pick `main` and type a version such as `1.2.0`. The workflow runs the tests, builds the app for Apple Silicon and Intel, tags the commit `v1.2.0` and publishes a release with the zip attached.
+On GitHub, open **Actions → Release → Run workflow**, pick `main` and type a version such as `1.2.0`. The workflow runs the tests, builds the app for Apple Silicon and Intel, signs it, tags the commit `v1.2.0` and publishes a release with the zip attached.
+
+Releases are signed with a self-signed certificate kept in the repo secrets `NOTCH_SIGNING_P12` (the .p12 file, base64) and `NOTCH_SIGNING_PASSWORD`. Every release must use the same certificate (SHA-1 `19180d694e220d1d49ea3447a26528fcd16f1530`, which the workflow checks): installed copies only accept updates signed with it, and macOS ties Notch's permissions to it. Local builds stay ad-hoc signed.
 
 If a run fails while uploading, delete any leftover draft release on the Releases page before running it again.
 
