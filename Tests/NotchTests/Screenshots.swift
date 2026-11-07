@@ -75,6 +75,7 @@ struct Screenshots {
         }
         .padding(.horizontal, 12).padding(.top, 4).padding(.bottom, 8)
         .frame(width: HoverPanelView.width)
+        .background { MantelStyle.topGlow.padding(.horizontal, -20) }
         .environment(\.colorScheme, .dark)
         try save(notchShape(view), as: "clipboard.png")
     }
@@ -117,6 +118,7 @@ struct Screenshots {
         }
         .padding(.horizontal, 12).padding(.top, 4).padding(.bottom, 8)
         .frame(width: HoverPanelView.width)
+        .background { MantelStyle.topGlow.padding(.horizontal, -20) }
         .environment(\.colorScheme, .dark)
     }
 
@@ -127,8 +129,8 @@ struct Screenshots {
                 Label(title, systemImage: icon)
                     .font(.system(size: 11, weight: .medium))
                     .padding(.horizontal, 10).padding(.vertical, 4)
-                    .background(Capsule().fill(title == selected ? .white.opacity(0.16) : .clear))
-                    .foregroundStyle(title == selected ? .primary : .secondary)
+                    .background(Capsule().fill(title == selected ? MantelStyle.amber.opacity(0.22) : .clear))
+                    .foregroundStyle(title == selected ? AnyShapeStyle(MantelStyle.amber) : AnyShapeStyle(.secondary))
             }
             Spacer()
         }

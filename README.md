@@ -36,7 +36,7 @@ A small macOS menu bar app that keeps what you need at the top of your screen, i
 - Skips meetings you've **declined**, all-day events and cancelled events.
 - When two meetings overlap, the one that **hasn't started yet** wins.
 - Tinted with the **calendar's colour**, so work and personal meetings look different.
-- Choose which calendars to watch from the menu bar.
+- Choose which calendars to watch in Settings.
 
 ### Music card (Spotify and Apple Music)
 
@@ -60,7 +60,7 @@ A small macOS menu bar app that keeps what you need at the top of your screen, i
   - Kept **in memory only**: nothing is saved, and the list is gone when Mantel quits.
   - Skips anything password managers mark as private, one-time codes and other temporary copies, and copied files.
   - Also skips copies from your iPhone (Universal Clipboard) and very large copies (over a million characters).
-  - Turn it off, or clear it, from the menu bar.
+  - Turn it off, or clear it, in Settings.
 - **Today**: the meeting in progress (**Now**), the **Next** one with a countdown like "in 1h 20m", and up to three more, each with its calendar's colour and a **Join** button where there's a link. "No more meetings today" when your day is done.
 - **Timer**: start a **5, 15, 25 or 45-minute** timer. While it runs, the time left shows beside the notch, and the tab has **Pause**, **+1 min** and **Stop**.
   - When it ends, the notch drops down with **Time's up** and a chime for 10 seconds.
@@ -106,7 +106,7 @@ xattr -dr com.apple.quarantine /Applications/Mantel.app
 Once installed in Applications, Mantel **updates itself**: it checks a minute after starting and every 6 hours, downloads a newer release, checks it's signed by Mantel's release certificate, swaps it in and reopens. There's no Open Anyway step, and macOS keeps Mantel's permissions.
 
 - The repo is private, so updates download through the **GitHub CLI** (`gh`) with your own login. Install it with Homebrew (`brew install gh`) and run `gh auth login` once.
-- Turn **Install Updates Automatically** off in the menu to only update when you choose **Check for Updates Now**.
+- Turn **Install Updates Automatically** off in Settings to only update when you choose **Check for Updates Now** in the menu.
 - Updates only start from a release signed this way (1.3.0 or later). If you're on an older version, install the latest release by hand once, as above.
 
 ### Build it yourself
@@ -137,21 +137,22 @@ macOS asks for these permissions, each the first time it's needed:
 
 If you said no by accident, the menu bar menu has a shortcut to the right System Settings page.
 
-Because the app isn't signed with a paid Apple developer account, macOS may ask for these permissions again after you update or rebuild.
+Updates keep these permissions. A copy you build yourself may ask again each time you rebuild.
 
 ### Start at login
 
-Add Mantel in **System Settings → General → Login Items**.
+Mantel adds itself to **System Settings → General → Login Items** the first time it opens from Applications, so it starts when you log in. Turn **Open at Login** off in Settings if you'd rather it didn't.
 
 ## Using it
 
-Click the menu bar icon to:
+Click the menu bar icon for:
 
-- choose which **calendars** to watch;
-- turn the **music card** on or off;
-- turn **album art** on or off;
-- turn the **charging animation** and **low battery alert** on or off;
-- turn **clipboard history** on or off, or clear it;
+- anything that needs your attention, such as calendar access being off, with a button to fix it;
+- the version and update status, and **Check for Updates Now**;
+- **Settings…** (or ⌘, while the menu is open), with three sections:
+  - **General**: Open at Login, Install Updates Automatically;
+  - **Features**: music card, album art, charging animation, low battery alert, clipboard history (and clearing it);
+  - **Calendars**: which calendars to watch;
 - quit.
 
 ## Privacy

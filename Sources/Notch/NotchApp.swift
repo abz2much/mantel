@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let clipboard = ClipboardService()
     let updates = UpdateService()
     let timer = TimerService()
+    let loginItem = LoginItemService()
     private(set) lazy var controller = NotchController(calendar: calendar, music: music, battery: battery,
                                                        clipboard: clipboard, timer: timer)
 
@@ -18,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         battery.start()
         clipboard.start()
         updates.start()
+        loginItem.start()
         Task { await calendar.start() }
     }
 }
@@ -28,73 +30,52 @@ struct NotchApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuContent(calendar: delegate.calendar, music: delegate.music, battery: delegate.battery,
-                        clipboard: delegate.clipboard, updates: delegate.updates)
+            MenuContent(calendar: delegate.calendar, music: delegate.music, updates: delegate.updates)
         } label: {
             Image(nsImage: MenuBarIcon.image)
         }
         .menuBarExtraStyle(.menu)
+
+        Settings {
+            SettingsView(calendar: delegate.calendar, music: delegate.music, battery: delegate.battery,
+                         clipboard: delegate.clipboard, updates: delegate.updates, loginItem: delegate.loginItem)
+        }
     }
 }
 
+/// The menu bar menu: anything needing attention, update status, Settings and Quit.
 struct MenuContent: View {
     @ObservedObject var calendar: CalendarService
     @ObservedObject var music: MusicService
-    @ObservedObject var battery: BatteryService
-    @ObservedObject var clipboard: ClipboardService
     @ObservedObject var updates: UpdateService
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
-        if !calendar.hasAccess {
-            Text("Calendar access not granted")
-            Button("Open Privacy Settings…") {
-                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!)
-            }
-        } else {
-            Text("Calendars")
-            ForEach(calendar.calendars, id: \.calendarIdentifier) { cal in
-                Toggle("\(cal.title) (\(cal.source.title))", isOn: Binding(
-                    get: { calendar.isSelected(cal) },
-                    set: { calendar.setSelected($0, for: cal) }
-                ))
+        let warnings = MenuWarnings.make(calendarAccess: calendar.hasAccess, musicEnabled: music.musicEnabled,
+                                         blockedApps: music.blockedApps)
+        ForEach(warnings, id: \.self) { warning in
+            switch warning {
+            case .calendarAccess:
+                Text("⚠︎ Calendar access is off")
+                Button("Open Privacy Settings…") { SystemSettings.open(.calendars) }
+            case .automation(let apps):
+                Text("⚠︎ \(apps) control is blocked")
+                Button("Open Automation Settings…") { SystemSettings.open(.automation) }
             }
         }
-        Divider()
-        Toggle("Show music card", isOn: $music.musicEnabled)
-        Toggle("Show album art", isOn: $music.showAlbumArt)
-            .disabled(!music.musicEnabled)
-        if music.musicEnabled && !music.blockedApps.isEmpty {
-            Text("\(music.blockedApps.joined(separator: " and ")) control blocked: Automation permission denied")
-            Button("Open Automation Settings…") {
-                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation")!)
-            }
-        }
-        Divider()
-        Toggle("Charging animation", isOn: $battery.chargingAlertEnabled)
-        Toggle("Low battery alert", isOn: $battery.lowAlertEnabled)
-        Divider()
-        Toggle("Clipboard history", isOn: $clipboard.enabled)
-        Button("Clear Clipboard History") { clipboard.clear() }
-            .disabled(!clipboard.enabled || clipboard.items.isEmpty)
-        Divider()
-        Text(updateLine)
-        Toggle("Install Updates Automatically", isOn: $updates.autoInstall)
+        if !warnings.isEmpty { Divider() }
+        Text(UpdateStatusText.line(updates))
         Button("Check for Updates Now") { updates.checkNow() }
             .disabled(updates.status == .checking)
         Divider()
+        Button("Settings…") {
+            // A menu bar app isn't frontmost: bring Mantel forward so Settings never opens behind other windows.
+            NSApp.activate()
+            openSettings()
+        }
+        .keyboardShortcut(",")
+        Divider()
         Button("Quit Mantel") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
-    }
-
-    private var updateLine: String {
-        let version = updates.currentVersion.map { "Mantel \($0)" } ?? "Mantel"
-        switch updates.status {
-        case .notChecked: return version
-        case .checking: return "\(version): checking for updates…"
-        case .upToDate: return "\(version): up to date"
-        case .installing(let new): return "Installing Mantel \(new)…"
-        case .available(let new): return "Mantel \(new) is available: choose Check for Updates Now"
-        case .unavailable(let reason), .failed(let reason): return "\(version): \(reason)"
-        }
     }
 }
