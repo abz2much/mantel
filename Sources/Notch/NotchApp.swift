@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let music = MusicService()
     let battery = BatteryService()
     let clipboard = ClipboardService()
+    let updates = UpdateService()
     private(set) lazy var controller = NotchController(calendar: calendar, music: music, battery: battery, clipboard: clipboard)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -14,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         music.start()
         battery.start()
         clipboard.start()
+        updates.start()
         Task { await calendar.start() }
     }
 }
@@ -24,7 +26,8 @@ struct NotchApp: App {
 
     var body: some Scene {
         MenuBarExtra("Notch", systemImage: "calendar.badge.clock") {
-            MenuContent(calendar: delegate.calendar, music: delegate.music, battery: delegate.battery, clipboard: delegate.clipboard)
+            MenuContent(calendar: delegate.calendar, music: delegate.music, battery: delegate.battery,
+                        clipboard: delegate.clipboard, updates: delegate.updates)
         }
         .menuBarExtraStyle(.menu)
     }
@@ -35,6 +38,7 @@ struct MenuContent: View {
     @ObservedObject var music: MusicService
     @ObservedObject var battery: BatteryService
     @ObservedObject var clipboard: ClipboardService
+    @ObservedObject var updates: UpdateService
 
     var body: some View {
         if !calendar.hasAccess {
@@ -69,7 +73,23 @@ struct MenuContent: View {
         Button("Clear Clipboard History") { clipboard.clear() }
             .disabled(!clipboard.enabled || clipboard.items.isEmpty)
         Divider()
+        Text(updateLine)
+        Toggle("Install Updates Automatically", isOn: $updates.autoInstall)
+        Button("Check for Updates Now") { updates.checkNow() }
+            .disabled(updates.status == .checking)
+        Divider()
         Button("Quit Notch") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
+    }
+
+    private var updateLine: String {
+        let version = updates.currentVersion.map { "Notch \($0)" } ?? "Notch"
+        switch updates.status {
+        case .notChecked: return version
+        case .checking: return "\(version): checking for updates…"
+        case .upToDate: return "\(version): up to date"
+        case .installing(let new): return "Installing Notch \(new)…"
+        case .unavailable(let reason), .failed(let reason): return "\(version): \(reason)"
+        }
     }
 }

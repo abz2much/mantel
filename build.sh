@@ -4,6 +4,8 @@
 #   NOTCH_UNIVERSAL=1      build for both Apple Silicon and Intel
 #   NOTCH_VERSION=1.2.3    version shown in Finder and About
 #   NOTCH_BUILD=42         build number
+#   NOTCH_SIGN_IDENTITY    certificate to sign with (default "-": ad-hoc, for local builds)
+#   NOTCH_KEYCHAIN         keychain holding that certificate
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -24,6 +26,8 @@ if [[ -n "${NOTCH_BUILD:-}" ]]; then
   plutil -replace CFBundleVersion -string "$NOTCH_BUILD" "$APP/Contents/Info.plist"
 fi
 
-codesign --force --sign - "$APP"
+SIGN_ARGS=(--force --sign "${NOTCH_SIGN_IDENTITY:--}")
+if [[ -n "${NOTCH_KEYCHAIN:-}" ]]; then SIGN_ARGS+=(--keychain "$NOTCH_KEYCHAIN"); fi
+codesign "${SIGN_ARGS[@]}" "$APP"
 codesign --verify --verbose "$APP"
 echo "Built $APP"
