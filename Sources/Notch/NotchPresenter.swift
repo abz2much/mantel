@@ -176,7 +176,8 @@ final class NotchPresenter<Expanded: View, Leading: View, Trailing: View>: Obser
         case .compact:
             size = CGSize(width: metrics.notchSize.width + sides.leading + sides.trailing + top * 2,
                           height: max(metrics.notchSize.height, metrics.menubarHeight))
-            offset = NotchGeometry.compactOffset(leading: sides.leading, trailing: sides.trailing)
+            // Only a real notch needs re-centring over the camera; a monitor's tab is simply centred.
+            if metrics.hasNotch { offset = NotchGeometry.compactOffset(leading: sides.leading, trailing: sides.trailing) }
         }
         return CGRect(x: (windowSize.width - size.width) / 2 + offset, y: 0, width: size.width, height: size.height)
     }

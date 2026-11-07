@@ -98,3 +98,11 @@ func pointerOverShapeHoversAndTakesClicks() async {
     let elapsed = await ContinuousClock().measure { await p.hide() }
     #expect(elapsed < .milliseconds(50))
 }
+
+@Test func monitorTabIsCentred() {
+    let monitor = NotchMetrics(notchSize: CGSize(width: 0, height: 24), menubarHeight: 24, hasNotch: false)
+    let tab = NotchPresenter<EmptyView, EmptyView, EmptyView>.shapeRect(
+        presentation: .compact, metrics: monitor, contentSize: .zero,
+        sides: (leading: 180, trailing: 0), windowSize: CGSize(width: 1720, height: 720))
+    #expect(tab.midX == 860)
+}
