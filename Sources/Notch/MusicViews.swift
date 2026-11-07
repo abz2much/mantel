@@ -184,11 +184,12 @@ struct MusicCompactTrailing: View {
     }
 }
 
-/// Expanded content, chosen by `NotchController`: meeting popup, music card, or the idle panel.
+/// Expanded content, chosen by `NotchController`: meeting popup, music card, or the hover panel.
 struct NotchRootView: View {
     @ObservedObject var state: NotchState
     @ObservedObject var music: MusicService
     @ObservedObject var calendar: CalendarService
+    @ObservedObject var clipboard: ClipboardService
     let onJoin: (URL) -> Void
     let onDismiss: () -> Void
 
@@ -196,8 +197,8 @@ struct NotchRootView: View {
         switch state.content {
         case .meeting where state.event != nil:
             NotchView(state: state, onJoin: onJoin, onDismiss: onDismiss)
-        case .idle:
-            IdlePanelView(events: calendar.events, calendarAccess: calendar.hasAccess, music: music, onJoin: onJoin)
+        case .panel:
+            HoverPanelView(state: state, music: music, calendar: calendar, clipboard: clipboard, onJoin: onJoin)
         default:
             MusicCardView(music: music)
         }

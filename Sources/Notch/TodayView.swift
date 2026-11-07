@@ -1,59 +1,15 @@
 import SwiftUI
 
-/// Shown when hovering the idle notch: a paused song to resume, then what's left of today.
-struct IdlePanelView: View {
+/// The Today tab: what's left of today's meetings, with Join buttons.
+struct TodayView: View {
     let events: [MeetingEvent]
     let calendarAccess: Bool
-    @ObservedObject var music: MusicService
     let onJoin: (URL) -> Void
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
-            VStack(alignment: .leading, spacing: 10) {
-                if let track = music.track {
-                    resumeRow(track)
-                    Divider().overlay(.white.opacity(0.15))
-                }
-                agendaSection(Agenda.make(events, now: context.date), now: context.date)
-            }
-            .frame(width: 360, alignment: .leading)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .environment(\.colorScheme, .dark)
-        }
-    }
-
-    // MARK: Music
-
-    private func resumeRow(_ track: TrackInfo) -> some View {
-        HStack(spacing: 10) {
-            Group {
-                if music.showAlbumArt, let art = music.artwork {
-                    Image(nsImage: art).resizable().aspectRatio(contentMode: .fill)
-                } else {
-                    ZStack {
-                        Color.white.opacity(0.12)
-                        Image(systemName: "music.note").foregroundStyle(.white.opacity(0.5))
-                    }
-                }
-            }
-            .frame(width: 36, height: 36)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(track.title).font(.subheadline.weight(.semibold)).lineLimit(1)
-                Text(track.artist).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-            }
-            Spacer(minLength: 8)
-            Button { music.playPause() } label: {
-                Image(systemName: "play.fill")
-                    .font(.system(size: 14))
-                    .foregroundStyle(music.accent ?? .white)
-                    .frame(width: 30, height: 30)
-                    .background(Circle().fill(.white.opacity(0.12)))
-            }
-            .buttonStyle(.plain)
-            .help("Resume")
+            agendaSection(Agenda.make(events, now: context.date), now: context.date)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -64,9 +20,11 @@ struct IdlePanelView: View {
         if !calendarAccess {
             Label("Calendar access is off", systemImage: "calendar.badge.exclamationmark")
                 .font(.caption).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)   // centred, like the other tabs' messages
         } else if agenda.current == nil, agenda.next == nil {
             Label("No more meetings today", systemImage: "checkmark.circle")
                 .font(.caption).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)   // centred, like the other tabs' messages
         } else {
             VStack(alignment: .leading, spacing: 8) {
                 if let meeting = agenda.current {

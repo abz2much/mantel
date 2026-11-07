@@ -56,8 +56,61 @@ struct Screenshots {
             meeting("Lunch with Sam", in: 150, lasts: 60, colour: personal),
             meeting("1:1", in: 240, colour: work),
         ]
-        let view = IdlePanelView(events: events, calendarAccess: true, music: playingMusic(), onJoin: { _ in })
+        let view = panel(.today, events: events)
         try save(notchShape(view), as: "idle-panel.png")
+    }
+
+    @Test func clipboard() throws {
+        let now = Date()
+        let items = [
+            ClipboardItem(text: "https://example.com/docs/getting-started", copiedAt: now.addingTimeInterval(-60)),
+            ClipboardItem(text: "Meeting moved to Thursday 3pm", copiedAt: now.addingTimeInterval(-4 * 60)),
+            ClipboardItem(text: "git checkout -b feature/clipboard", copiedAt: now.addingTimeInterval(-9 * 60)),
+            ClipboardItem(text: "Order #A-1042", copiedAt: now.addingTimeInterval(-15 * 60)),
+        ]
+        let view = VStack(spacing: 8) {
+            tabs(selected: "Clipboard")
+            ClipboardListView(items: items, enabled: true, onCopy: { _ in }, scrolls: false)
+                .frame(height: HoverPanelView.contentHeight, alignment: .top)
+        }
+        .padding(.horizontal, 12).padding(.top, 4).padding(.bottom, 8)
+        .frame(width: HoverPanelView.width)
+        .environment(\.colorScheme, .dark)
+        try save(notchShape(view), as: "clipboard.png")
+    }
+
+    @Test func musicTab() throws {
+        let state = NotchState()
+        state.tab = .music
+        let view = HoverPanelView(state: state, music: playingMusic(), calendar: CalendarService(),
+                                  clipboard: ClipboardService(), onJoin: { _ in })
+        try save(notchShape(view), as: "music-tab.png")
+    }
+
+    /// The hover panel on one tab, with calendar data that doesn't come from the real calendar.
+    private func panel(_ tab: HoverTab, events: [MeetingEvent]) -> some View {
+        VStack(spacing: 8) {
+            tabs(selected: tab == .today ? "Today" : "Music")
+            TodayView(events: events, calendarAccess: true, onJoin: { _ in })
+                .frame(height: HoverPanelView.contentHeight, alignment: .top)
+        }
+        .padding(.horizontal, 12).padding(.top, 4).padding(.bottom, 8)
+        .frame(width: HoverPanelView.width)
+        .environment(\.colorScheme, .dark)
+    }
+
+    /// A stand-in for the panel's tab bar (the real one needs live services).
+    private func tabs(selected: String) -> some View {
+        HStack(spacing: 4) {
+            ForEach([("Music", "music.note"), ("Clipboard", "doc.on.clipboard"), ("Today", "calendar")], id: \.0) { title, icon in
+                Label(title, systemImage: icon)
+                    .font(.system(size: 11, weight: .medium))
+                    .padding(.horizontal, 10).padding(.vertical, 4)
+                    .background(Capsule().fill(title == selected ? .white.opacity(0.16) : .clear))
+                    .foregroundStyle(title == selected ? .primary : .secondary)
+            }
+            Spacer()
+        }
     }
 
     private func playingMusic() -> MusicService {

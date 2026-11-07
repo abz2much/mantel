@@ -6,11 +6,17 @@ import os
 
 @MainActor
 final class NotchState: ObservableObject {
-    /// What the expanded notch shows.
-    enum Content { case meeting, music, idle }
+    /// What the expanded notch shows: a meeting reminder, the music card on its own (a peek on
+    /// screens without a notch), or the hover panel with its tabs.
+    enum Content { case meeting, music, panel }
 
     @Published var event: MeetingEvent?
     @Published var content: Content = .music
+    /// The hover panel's open tab; whichever was shown last opens next time.
+    @Published var tab: HoverTab = .music {
+        didSet { lastTab = tab }
+    }
+    private(set) var lastTab: HoverTab?
     /// The battery flash showing in the compact notch, if any, and when it started.
     @Published var battery: BatteryAlert?
     @Published var batteryShownAt: Date?
@@ -31,6 +37,7 @@ final class NotchController {
     private let calendar: CalendarService
     private let music: MusicService
     private let battery: BatteryService
+    private let clipboard: ClipboardService
     private let state = NotchState()
     private var notch: DynamicNotch<NotchRootView, CompactLeading, CompactTrailing>?
 
@@ -48,10 +55,11 @@ final class NotchController {
     private var timer: Timer?
     private var batteryTimer: Timer?
 
-    init(calendar: CalendarService, music: MusicService, battery: BatteryService) {
+    init(calendar: CalendarService, music: MusicService, battery: BatteryService, clipboard: ClipboardService) {
         self.calendar = calendar
         self.music = music
         self.battery = battery
+        self.clipboard = clipboard
         battery.onAlert = { [weak self] alert in self?.flashBattery(alert) }
         calendar.onUpdate = { [weak self] in self?.evaluate() }
         music.onChange = { [weak self] in self?.evaluate() }
@@ -72,6 +80,7 @@ final class NotchController {
                     state: state,
                     music: music,
                     calendar: calendar,
+                    clipboard: clipboard,
                     onJoin: { [weak self] url in
                         NSWorkspace.shared.open(url)
                         self?.dismissCurrent()
@@ -147,6 +156,7 @@ final class NotchController {
             hoverTimer = Timer.scheduledTimer(withTimeInterval: Self.hoverDwell, repeats: false) { [weak self] _ in
                 MainActor.assumeIsolated {
                     guard let self, self.notch?.isHovering == true else { return }
+                    self.state.tab = HoverTab.opening(last: self.state.lastTab, hasTrack: self.music.track != nil)
                     self.hoverExpanded = true
                     self.evaluate()
                 }
@@ -209,8 +219,16 @@ final class NotchController {
         }
     }
 
+    /// The notch's window can take the keyboard; by default a click there keeps it, so ⌘V straight after
+    /// clicking a clipboard row would land in Notch. This keeps it only when something needs typing.
+    /// The window is rebuilt each time the notch shows, so it's set after every show.
+    private func keepKeyboardInFrontApp() {
+        (notch?.windowController?.window as? NSPanel)?.becomesKeyOnlyIfNeeded = true
+    }
+
     private func perform(_ mode: Mode) async {
-        music.setPolling(mode == .musicExpanded)
+        // The music tab's progress bar needs the position; the panel opens from both music and idle.
+        music.setPolling(mode == .musicExpanded || mode == .idleExpanded)
         let screen = Self.targetScreen()
         switch mode {
         case .hidden: await notch?.hide()
@@ -219,15 +237,17 @@ final class NotchController {
             await notch?.compact(on: screen)
             if desired == .battery { startFlashClock() }
         case .musicExpanded:
-            state.content = .music
+            // Hovering a notch opens the panel; without a notch this is the brief peek at a new song.
+            state.content = screen.hasNotchInset ? .panel : .music
             await notch?.expand(on: screen)
         case .idleExpanded:
-            state.content = .idle
+            state.content = .panel
             await notch?.expand(on: screen)
         case .meeting:
             state.content = .meeting
             await notch?.expand(on: screen)
         }
+        keepKeyboardInFrontApp()
     }
 
     /// Prefer the built-in display (the one with a notch); otherwise the main screen.

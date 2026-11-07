@@ -3,13 +3,16 @@
 A small macOS menu bar app that puts your next meeting and what's playing on Spotify or Apple Music into the MacBook notch.
 
 <p align="center">
-  <img src="docs/images/music-card.png" width="480" alt="Expanded music card with album art, glow, progress bar and controls">
+  <img src="docs/images/music-tab.png" width="480" alt="Hover panel on the Music tab: album art, glow, progress bar and controls">
 </p>
 <p align="center">
   <img src="docs/images/meeting.png" width="560" alt="Meeting popup counting down to a Zoom call with a Join button">
 </p>
 <p align="center">
-  <img src="docs/images/idle-panel.png" width="440" alt="Panel shown when hovering the idle notch: a paused song to resume, then today's meetings">
+  <img src="docs/images/clipboard.png" width="480" alt="Hover panel on the Clipboard tab: recent copies with how long ago">
+</p>
+<p align="center">
+  <img src="docs/images/idle-panel.png" width="480" alt="Hover panel on the Today tab: today's meetings with Join buttons">
 </p>
 <p align="center">
   <img src="docs/images/compact.png" width="320" alt="Compact view: a tiny album cover and waveform either side of the notch">
@@ -32,7 +35,7 @@ A small macOS menu bar app that puts your next meeting and what's playing on Spo
 
 ### Music card (Spotify and Apple Music)
 
-- A small cover (or music note) sits beside the notch while Spotify or Apple Music plays. **Hover** to open the full card.
+- A small cover (or music note) sits beside the notch while Spotify or Apple Music plays. **Hover** and the panel opens on the Music tab.
 - Title and artist, with long titles **scrolling** instead of being cut off.
 - **Play/pause, next and previous.**
 - **Progress bar you can click or drag** to jump to any point in the song.
@@ -42,13 +45,18 @@ A small macOS menu bar app that puts your next meeting and what's playing on Spo
 - Hides itself after 2 minutes paused, and when the app quits.
 - **Both apps open?** The card shows the one that's playing. If both are playing, the one that started last; if both are paused, the one you used last.
 
-### When nothing's happening
+### Hover panel: Music, Clipboard, Today
 
-With no music playing and no meeting coming up, **hover the notch** to see:
+**Hover the notch** to open a panel with three tabs. It opens on the tab you used last, and stays the same size on every tab.
 
-- the **paused song**, with a play button to resume it;
-- **today's meetings**: the one in progress (**Now**), the **Next** one with a countdown like "in 1h 20m", and up to three more, each with its calendar's colour and a **Join** button where there's a link;
-- "No more meetings today" when your day is done.
+- **Music**: the full music card, playing or paused, or "Nothing playing".
+- **Clipboard**: your last 10 text copies, newest first. **Click one** to put it back on the clipboard, then press ⌘V where you want it.
+  - Text only. Copying the same thing again moves it to the top.
+  - Kept **in memory only**: nothing is saved, and the list is gone when Notch quits.
+  - Skips anything password managers mark as private, one-time codes and other temporary copies, and copied files.
+  - Also skips copies from your iPhone (Universal Clipboard) and very large copies (over a million characters).
+  - Turn it off, or clear it, from the menu bar.
+- **Today**: the meeting in progress (**Now**), the **Next** one with a countdown like "in 1h 20m", and up to three more, each with its calendar's colour and a **Join** button where there's a link. "No more meetings today" when your day is done.
 
 To make this hoverable, the notch stays as a slightly wider black shape while idle.
 
@@ -61,7 +69,7 @@ To make this hoverable, the notch stays as a slightly wider black shape while id
 
 ### Without a notch
 
-On a Mac or display without a notch there's no compact view, idle panel or battery flash. The music card shows briefly whenever a song starts, and meeting reminders work as normal.
+On a Mac or display without a notch there's no compact view, hover panel (so no clipboard history) or battery flash. The music card shows briefly whenever a song starts, and meeting reminders work as normal.
 
 ## Requirements
 
@@ -128,6 +136,7 @@ Click the menu bar icon to:
 - turn the **music card** on or off;
 - turn **album art** on or off;
 - turn the **charging animation** and **low battery alert** on or off;
+- turn **clipboard history** on or off, or clear it;
 - quit.
 
 ## Privacy
@@ -136,6 +145,7 @@ Click the menu bar icon to:
 - **Notch never launches Spotify or Apple Music** and only talks to them while they're already running.
 - **Album art is off by default.** When on, Notch downloads Spotify covers from Spotify's image server (`i.scdn.co`) only, with no cookies. Apple Music covers are read from the Music app itself, with no download. Nothing else goes online.
 - Song titles and artists are never written to logs.
+- **Clipboard history stays in memory** and is never saved or logged. Private and temporary copies (passwords, one-time codes) are skipped.
 
 ## Development
 
