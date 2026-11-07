@@ -1,6 +1,6 @@
 import AppKit
 
-/// Keeps recent text copies while Notch runs. Nothing is saved to disk and copied text is never logged.
+/// Keeps recent text copies while Mantel runs. Nothing is saved to disk and copied text is never logged.
 @MainActor
 final class ClipboardService: ObservableObject {
     private static let enabledKey = "clipboardHistory"
@@ -24,7 +24,7 @@ final class ClipboardService: ObservableObject {
     init(pasteboard: NSPasteboard = .general) {
         self.pasteboard = pasteboard
         enabled = UserDefaults.standard.object(forKey: Self.enabledKey) as? Bool ?? true
-        // Whatever was on the clipboard before Notch started isn't recorded.
+        // Whatever was on the clipboard before Mantel started isn't recorded.
         lastChangeCount = pasteboard.changeCount
     }
 

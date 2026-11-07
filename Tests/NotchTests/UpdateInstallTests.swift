@@ -25,7 +25,7 @@ private func zippedApp(id: String, version: String) throws -> (zip: URL, dir: UR
 
 /// The "installed" copy: a minimal Notch bundle plus a marker file to show whether it was replaced.
 private func target(in dir: URL) throws -> URL {
-    let app = dir.appendingPathComponent("installed/Notch.app")
+    let app = dir.appendingPathComponent("installed/Mantel.app")
     try FileManager.default.createDirectory(at: app.appendingPathComponent("Contents"), withIntermediateDirectories: true)
     try PropertyListSerialization.data(fromPropertyList: ["CFBundleIdentifier": "local.notch.app"], format: .xml, options: 0)
         .write(to: app.appendingPathComponent("Contents/Info.plist"))
@@ -58,7 +58,7 @@ private func install(_ zip: URL, version: AppVersion, over app: URL, dir: URL) t
 
 @Test func refusesWhenTheInstalledAppHasMoved() throws {
     let (zip, dir) = try zippedApp(id: "local.notch.app", version: "2.0.0")
-    let missing = dir.appendingPathComponent("installed/Notch.app")   // never created
+    let missing = dir.appendingPathComponent("installed/Mantel.app")   // never created
     let error = #expect(throws: UpdateService.UpdateError.self) { try install(zip, version: AppVersion(2, 0, 0), over: missing, dir: dir) }
     #expect(error?.message == "Mantel was moved or renamed; reopen it to update")
 }

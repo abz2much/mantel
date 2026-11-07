@@ -16,7 +16,7 @@ struct TrackInfo: Equatable {
     var isLive: Bool { duration <= 0 }
 }
 
-/// A music app Notch can show and control.
+/// A music app Mantel can show and control.
 struct PlayerApp: Sendable {
     enum Kind: Sendable { case spotify, music }
     let kind: Kind

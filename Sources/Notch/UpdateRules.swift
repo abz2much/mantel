@@ -41,17 +41,7 @@ enum UpdateRules {
         ghCandidates.first(where: exists)
     }
 
-    /// The app's file name, and its release download. Releases also carry Notch-X.zip with Notch.app
-    /// inside, so copies from before the rename can still update.
+    /// The app's file name, and its release download.
     static let appName = "Mantel.app"
     static func zipName(_ version: AppVersion) -> String { "Mantel-\(version).zip" }
-
-    /// An installed copy still called Notch.app (from before the rename) moves itself to Mantel.app
-    /// in the same folder, unless something is already there.
-    static func renameTarget(appURL: URL, home: URL,
-                             exists: (String) -> Bool = { FileManager.default.fileExists(atPath: $0) }) -> URL? {
-        guard appURL.lastPathComponent == "Notch.app", canSelfUpdate(appURL: appURL, home: home) else { return nil }
-        let target = appURL.deletingLastPathComponent().appendingPathComponent(appName)
-        return exists(target.path) ? nil : target
-    }
 }
