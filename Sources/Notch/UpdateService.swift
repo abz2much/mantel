@@ -23,7 +23,7 @@ final class UpdateService: ObservableObject {
 
     private static let log = Logger(subsystem: "local.notch.app", category: "update")
     private static let autoKey = "autoUpdate"
-    nonisolated private static let repo = "abz2much/notch"
+    nonisolated private static let repo = "abz2much/mantel"
     private static let checkEvery: TimeInterval = 6 * 3600
     private static let firstCheckAfter: TimeInterval = 60
 

@@ -35,7 +35,7 @@ On a screen without a notch, such as an external display, you still get meeting 
 
 You'll need macOS 14 Sonoma or later. Mantel works with the Spotify desktop app and with Apple Music.
 
-1. Download the latest `Mantel-x.y.z.zip` from the [Releases page](https://github.com/abz2much/notch/releases/latest) and open it.
+1. Download the latest `Mantel-x.y.z.zip` from the [Releases page](https://github.com/abz2much/mantel/releases/latest) and open it.
 2. Drag Mantel to your Applications folder and open it.
 3. macOS will block it the first time, because Mantel isn't from the App Store. Go to System Settings, then Privacy & Security, scroll down and click Open Anyway. You need to do this within an hour of trying to open it.
 4. Mantel then asks for a couple of permissions. Calendar access lets it read your meetings, and it never changes them. Permission to control Spotify or Music lets it show the current song and handle play, pause and skip.
@@ -73,8 +73,8 @@ If the menu says updates need the GitHub CLI, install it with `brew install gh` 
 You can build Mantel from source if you have Xcode 16 or later. The command line tools on their own aren't enough on recent versions of macOS.
 
 ```sh
-git clone https://github.com/abz2much/notch.git
-cd notch
+git clone https://github.com/abz2much/mantel.git
+cd mantel
 ./build.sh
 ```
 
