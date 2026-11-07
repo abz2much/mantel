@@ -36,6 +36,7 @@ A small macOS menu bar app that puts your next meeting and what's playing on Spo
 - Title and artist, with long titles **scrolling** instead of being cut off.
 - **Play/pause, next and previous.**
 - **Progress bar you can click or drag** to jump to any point in the song.
+- Live radio (such as Apple Music radio) shows **LIVE** instead, since there's no length to seek in. Radio often has no cover.
 - Optional **album art** with a **glow** and accent colours taken from the cover.
 - Smooth transitions between songs; the cover sits back slightly when paused.
 - Hides itself after 2 minutes paused, and when the app quits.

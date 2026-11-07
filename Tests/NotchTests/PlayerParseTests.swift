@@ -59,3 +59,10 @@ private func reply(_ items: [Any]) -> NSAppleEventDescriptor {
 @Test func coverThatIsNotAnImageGivesNothing() {
     #expect(PlayerService.thumbnail(Data([0x6D, 0x73, 0x6E, 0x67]), maxPixels: 300) == nil)
 }
+
+@Test func trackWithoutALengthIsLive() {
+    let radio = TrackInfo(state: .playing, title: "Live Show", artist: "Station", duration: 0, artworkKey: nil)
+    let song = TrackInfo(state: .playing, title: "Song", artist: "Artist", duration: 215, artworkKey: nil)
+    #expect(radio.isLive)
+    #expect(!song.isLive)
+}

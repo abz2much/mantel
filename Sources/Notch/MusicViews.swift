@@ -18,7 +18,7 @@ struct MusicCardView: View {
                     // New song: the old title fades out and the new one slides up.
                     .id("\(track.title)|\(track.artist)")
                     .transition(.asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity), removal: .opacity))
-                    progress(track)
+                    if track.isLive { liveLabel } else { progress(track) }
                     controls(track)
                 }
             }
@@ -57,6 +57,19 @@ struct MusicCardView: View {
         .shadow(color: (music.accent ?? .clear).opacity(0.8), radius: 16)   // the glow
         .scaleEffect(track.state == .playing ? 1 : 0.88)   // sits back a little while paused
         .animation(.spring(response: 0.4, dampingFraction: 0.7), value: track.state)
+    }
+
+    /// In place of the progress bar for live radio, which has no length to show or seek in.
+    private var liveLabel: some View {
+        HStack(spacing: 5) {
+            Circle().fill(.red).frame(width: 6, height: 6)
+            Text("LIVE")
+                .font(.system(size: 10, weight: .bold))
+                .tracking(1)
+        }
+        .foregroundStyle(.secondary)
+        .frame(height: 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func progress(_ track: TrackInfo) -> some View {

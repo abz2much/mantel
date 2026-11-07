@@ -12,6 +12,8 @@ struct TrackInfo: Equatable {
     var duration: TimeInterval
     /// Identifies the cover: Spotify's image URL, or title/artist/album for Apple Music.
     var artworkKey: String?
+    /// A live stream such as Apple Music radio: no length, so no progress bar.
+    var isLive: Bool { duration <= 0 }
 }
 
 /// A music app Notch can show and control.
