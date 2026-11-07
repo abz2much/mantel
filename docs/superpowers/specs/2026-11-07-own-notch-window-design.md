@@ -1,6 +1,6 @@
 # Mantel's own notch window, new animation and monitor support
 
-Date: 7 Nov 2026. Status: agreed in conversation, waiting for approval of this document.
+Date: 7 Nov 2026. Status: approved by the owner on 7 Nov 2026.
 
 ## Why
 
@@ -13,7 +13,7 @@ The owner chose to write Mantel's own window rather than copy the library in. Id
 
 ## Goals
 
-- Remove DynamicNotchKit completely (`Package.swift`, `Package.resolved`, imports).
+- Remove DynamicNotchKit completely (`Package.swift`, `Package.resolved`, imports, and the README line that says Mantel is built on it). The owner chose no credit line.
 - On the laptop's notch, everything works as it does today, apart from the new animation.
 - New open/close animation: "E · Snap with a flash" (details below).
 - Mantel works on screens without a notch (monitors), via an invisible hover area at the top centre and a small black tab.
@@ -97,7 +97,6 @@ Move the decision rules out of `NotchController.evaluate()` into a pure type: in
 - **Full-screen apps on a monitor.** The top edge also brings down the macOS menu bar there. I'll test it. If the two clash, Mantel stays out of full-screen apps on the monitor (alerts included) and the README says so.
 - **What the tab shows.** Music and timer: album art, song title and time left. Music only: album art and song title. Timer only: the amber dot and time left. It respects the existing "Show music card" and "Show album art" switches.
 - **Hovering the tab** opens the panel, just like hovering the empty top centre.
-- **Credit.** The README keeps a line thanking DynamicNotchKit for ideas, now as inspiration rather than a dependency.
 - **Mockups folder.** `.superpowers/` goes into `.gitignore`.
 
 ## Left to the builder
