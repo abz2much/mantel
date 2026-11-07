@@ -71,6 +71,11 @@ jobs:
           echo "$P12" | base64 --decode > "$RUNNER_TEMP/signing.p12"
           security import "$RUNNER_TEMP/signing.p12" -k "$KC" -P "$P12_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KC_PASS" "$KC" >/dev/null
+          # Older codesign (Xcode 16) only finds identities in keychains on the search list, even with
+          # --keychain. Deleting the keychain at the end also takes it off the list.
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          security find-identity -p codesigning "$KC" | grep -q 19180D694E220D1D49EA3447A26528FCD16F1530 \
+            || { echo "::error::The signing certificate in the secrets isn't Notch's release certificate"; exit 1; }
           echo "NOTCH_KEYCHAIN=$KC" >> "$GITHUB_ENV"
 
       - name: Build the app (Apple Silicon and Intel)
@@ -78,7 +83,8 @@ jobs:
           NOTCH_UNIVERSAL: "1"
           NOTCH_VERSION: ${{ inputs.version }}
           NOTCH_BUILD: ${{ github.run_number }}
-          NOTCH_SIGN_IDENTITY: Notch Release Signing
+          # The release certificate's SHA-1, so exactly that certificate is used.
+          NOTCH_SIGN_IDENTITY: 19180D694E220D1D49EA3447A26528FCD16F1530
         run: ./build.sh
 
       # Installed copies only accept updates signed by this exact certificate (SHA-1 of the leaf).
