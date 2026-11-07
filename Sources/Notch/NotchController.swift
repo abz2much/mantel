@@ -32,8 +32,6 @@ final class NotchController {
 
     private static let log = Logger(subsystem: "local.notch.app", category: "notch")
 
-    private enum Mode: Equatable { case hidden, musicCompact, musicExpanded, idle, idleExpanded, meeting, battery, timerDone }
-
     private let calendar: CalendarService
     private let music: MusicService
     private let battery: BatteryService
@@ -45,8 +43,8 @@ final class NotchController {
     private var dismissed: Set<ReminderKey> = []
     private var currentReminder: ReminderKey?
 
-    private var desired: Mode = .hidden
-    private var applied: Mode = .hidden
+    private var desired: NotchMode = .hidden
+    private var applied: NotchMode = .hidden
     private var reconciling = false
 
     private var hoverExpanded = false
@@ -194,29 +192,20 @@ final class NotchController {
         if let target {
             state.event = target.event   // keeps title/link fresh after refetches
             currentReminder = target.key
-            hoverExpanded = false
-            desired = .meeting
         } else {
             currentReminder = nil
-            if music.showsCard {
-                if Self.targetScreen().hasNotchInset {
-                    desired = hoverExpanded ? .musicExpanded : .musicCompact
-                } else {
-                    desired = (peekUntil ?? .distantPast) > now ? .musicExpanded : .hidden
-                }
-            } else if Self.targetScreen().hasNotchInset {
-                // Idle: keep an empty compact notch so hovering it can open today's agenda.
-                desired = hoverExpanded ? .idleExpanded : .idle
-            } else {
-                hoverExpanded = false
-                desired = .hidden
-            }
         }
-        if target == nil, timerService.doneShowing {
-            hoverExpanded = false
-            desired = .timerDone
-        }
-        if state.battery != nil { desired = .battery }
+        let inputs = NotchInputs(
+            hasReminder: target != nil,
+            musicShowsCard: music.showsCard,
+            screenHasNotch: Self.targetScreen().hasNotchInset,
+            hoverExpanded: hoverExpanded,
+            peeking: (peekUntil ?? .distantPast) > now,
+            timerDoneShowing: timerService.doneShowing,
+            batteryFlashing: state.battery != nil
+        )
+        hoverExpanded = NotchDecision.keepsHoverExpanded(inputs)
+        desired = NotchDecision.mode(for: inputs)
         reconcile()
     }
 
@@ -242,7 +231,7 @@ final class NotchController {
         (notch?.windowController?.window as? NSPanel)?.becomesKeyOnlyIfNeeded = true
     }
 
-    private func perform(_ mode: Mode) async {
+    private func perform(_ mode: NotchMode) async {
         // The music tab's progress bar needs the position; the panel opens from both music and idle.
         music.setPolling(mode == .musicExpanded || mode == .idleExpanded)
         let screen = Self.targetScreen()
