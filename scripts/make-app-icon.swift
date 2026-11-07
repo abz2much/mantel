@@ -94,6 +94,7 @@ func png(size: Int) -> Data {
 }
 
 let fm = FileManager.default
+guard fm.fileExists(atPath: "Resources/Info.plist") else { print("Run this from the repo root"); exit(1) }
 let iconset = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("AppIcon-\(UUID().uuidString).iconset")
 try fm.createDirectory(at: iconset, withIntermediateDirectories: true)
 for points in [16, 32, 128, 256, 512] {
@@ -108,4 +109,5 @@ try iconutil.run(); iconutil.waitUntilExit()
 // A preview for the README and for checking by eye.
 try png(size: 512).write(to: URL(fileURLWithPath: "docs/images/app-icon.png"))
 try? fm.removeItem(at: iconset)
-print(iconutil.terminationStatus == 0 ? "Wrote \(out.path) and docs/images/app-icon.png" : "iconutil failed")
+guard iconutil.terminationStatus == 0 else { print("iconutil failed"); exit(1) }
+print("Wrote \(out.path) and docs/images/app-icon.png")

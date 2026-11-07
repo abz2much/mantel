@@ -197,7 +197,8 @@ final class UpdateService: ObservableObject {
 
     /// Opens the new copy once this one has really quit (opening while it still runs would just
     /// bring the old one forward). Only quits if the reopen could be set up.
-    static func relaunch(_ appURL: URL) {
+    @discardableResult
+    static func relaunch(_ appURL: URL) -> Bool {
         let opener = Process()
         opener.executableURL = URL(fileURLWithPath: "/bin/sh")
         // Path and process ID are passed as arguments, never pasted into the command. Waits up to 30 s.
@@ -206,8 +207,10 @@ final class UpdateService: ObservableObject {
         do {
             try opener.run()
             NSApp.terminate(nil)
+            return true
         } catch {
-            log.error("Couldn't schedule the relaunch; the update applies next time Mantel opens")
+            log.error("Couldn't schedule the relaunch; carrying on, and the new copy is used next time Mantel opens")
+            return false
         }
     }
 }

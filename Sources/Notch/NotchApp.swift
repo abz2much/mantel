@@ -33,8 +33,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
             return false   // keep running as Notch.app; nothing is lost
         }
-        UpdateService.relaunch(target)
-        return true
+        // If the reopen can't be set up, carry on starting up here; next launch comes from Mantel.app.
+        return UpdateService.relaunch(target)
     }
 }
 

@@ -34,3 +34,25 @@ struct UpdateEndToEnd {
         return AppVersion(tag: tag.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 }
+
+/// Installs a locally built, release-signed 9.9.9 zip over a throwaway copy:
+///   NOTCH_UPDATE_FIXTURE_ZIP=/path/Mantel-9.9.9.zip swift test --filter UpdateInstallFixture
+@Suite(.enabled(if: ProcessInfo.processInfo.environment["NOTCH_UPDATE_FIXTURE_ZIP"] != nil))
+struct UpdateInstallFixture {
+    @Test func installsAReleaseSignedUpdate() throws {
+        let zip = URL(fileURLWithPath: ProcessInfo.processInfo.environment["NOTCH_UPDATE_FIXTURE_ZIP"]!)
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("notch-e2e-\(UUID().uuidString)")
+        let target = dir.appendingPathComponent(UpdateRules.appName)
+        try FileManager.default.createDirectory(at: target.appendingPathComponent("Contents"), withIntermediateDirectories: true)
+        try PropertyListSerialization.data(fromPropertyList: ["CFBundleIdentifier": "local.notch.app"], format: .xml, options: 0)
+            .write(to: target.appendingPathComponent("Contents/Info.plist"))
+        let work = dir.appendingPathComponent("work")
+        try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+
+        try UpdateService.installZip(zip, version: AppVersion(9, 9, 9), appURL: target,
+                                     requirement: UpdateEndToEnd.releaseRequirement, bundleID: "local.notch.app", work: work)
+
+        #expect(UpdateService.infoPlist(target)?["CFBundleShortVersionString"] as? String == "9.9.9")
+        #expect(UpdateVerifier.satisfies(target, requirement: UpdateEndToEnd.releaseRequirement))
+    }
+}

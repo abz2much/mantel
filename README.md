@@ -91,7 +91,7 @@ On a Mac or display without a notch there's no compact view, hover panel (so no 
 ### Download
 
 1. Get **Mantel-x.y.z.zip** from the [latest release](https://github.com/abz2much/notch/releases/latest) and open it.
-2. Drag **Mantel.app** to your Applications folder, then open it.
+2. Drag **Mantel.app** to your Applications folder, then open it. If there's an old **Notch.app** in Applications (Mantel's earlier name), quit it and move it to the Bin first, and swap it for Mantel in Login Items if you use that.
 3. macOS blocks it the first time, because the app isn't from the App Store or a paid Apple developer account. Within the hour, go to **System Settings → Privacy & Security**, scroll down, click **Open Anyway** and confirm.
 4. Allow the permissions it asks for (see [Permissions](#permissions)).
 
@@ -127,7 +127,7 @@ mv build/Mantel.app /Applications/
 open /Applications/Mantel.app
 ```
 
-A calendar-with-clock icon appears in the menu bar. There's no Dock icon.
+Mantel's icon (the notch on a shelf) appears in the menu bar. There's no Dock icon.
 
 ### Permissions
 
@@ -168,14 +168,14 @@ Click the menu bar icon to:
 ```sh
 swift build        # build
 swift test         # run the tests
-NOTCH_FAKE_SPOTIFY=1 build/Mantel.app/Contents/MacOS/Mantel   # fake playing track, no Spotify needed
-NOTCH_FAKE_BATTERY=1 build/Mantel.app/Contents/MacOS/Mantel   # fake plug-in, then a drop to 20%
+NOTCH_FAKE_SPOTIFY=1 build/Mantel.app/Contents/MacOS/Notch   # fake playing track, no Spotify needed
+NOTCH_FAKE_BATTERY=1 build/Mantel.app/Contents/MacOS/Notch   # fake plug-in, then a drop to 20%
 NOTCH_FAKE_SPOTIFY=1 NOTCH_SCREENSHOTS_DIR=docs/images swift test --filter Screenshots   # regenerate the README screenshots
 ```
 
 ### Releasing
 
-On GitHub, open **Actions → Release → Run workflow**, pick `main` and type a version such as `1.2.0`. The workflow runs the tests, builds the app for Apple Silicon and Intel, signs it, tags the commit `v1.2.0` and publishes a release with the zip attached.
+On GitHub, open **Actions → Release → Run workflow**, pick `main` and type a version such as `1.2.0`. The workflow runs the tests, builds the app for Apple Silicon and Intel, signs it, tags the commit `v1.2.0` and publishes a release with two zips: `Mantel-X.zip`, and `Notch-X.zip` (the same app named Notch.app). Keep publishing the Notch zip: copies on 1.3.0 only download that one.
 
 Releases are signed with a self-signed certificate kept in the repo secrets `NOTCH_SIGNING_P12` (the .p12 file, base64) and `NOTCH_SIGNING_PASSWORD`. Every release must use the same certificate (SHA-1 `19180d694e220d1d49ea3447a26528fcd16f1530`, which the workflow checks): installed copies only accept updates signed with it, and macOS ties Mantel's permissions to it. Local builds stay ad-hoc signed.
 
