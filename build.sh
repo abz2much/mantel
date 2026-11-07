@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Builds Notch and assembles build/Notch.app, ad-hoc signed.
+# Builds Mantel and assembles build/Mantel.app, ad-hoc signed.
 # Optional, used by the release workflow:
 #   NOTCH_UNIVERSAL=1      build for both Apple Silicon and Intel
 #   NOTCH_VERSION=1.2.3    version shown in Finder and About
@@ -14,11 +14,12 @@ if [[ "${NOTCH_UNIVERSAL:-}" == 1 ]]; then ARCHS=(--arch arm64 --arch x86_64); f
 swift build -c release "${ARCHS[@]}"
 BIN="$(swift build -c release "${ARCHS[@]}" --show-bin-path)/Notch"
 
-APP=build/Notch.app
+APP=build/Mantel.app
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS"
-cp "$BIN" "$APP/Contents/MacOS/Notch"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp "$BIN" "$APP/Contents/MacOS/Notch"   # the program keeps its old internal name; only the app is Mantel
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 if [[ -n "${NOTCH_VERSION:-}" ]]; then
   plutil -replace CFBundleShortVersionString -string "$NOTCH_VERSION" "$APP/Contents/Info.plist"
 fi

@@ -94,7 +94,7 @@ final class UpdateService: ObservableObject {
                 } catch let error as UpdateError {
                     return .failure(error)
                 } catch let error as CocoaError where error.code == .fileWriteNoPermission {
-                    return .failure(UpdateError("Can't replace Notch in Applications (permissions)"))
+                    return .failure(UpdateError("Can't replace Mantel in Applications (permissions)"))
                 } catch {
                     return .failure(UpdateError("Update failed"))
                 }
@@ -131,7 +131,7 @@ final class UpdateService: ObservableObject {
         let work = try fm.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: appURL, create: true)
         defer { try? fm.removeItem(at: work) }
 
-        let zipName = "Notch-\(version).zip"
+        let zipName = UpdateRules.zipName(version)
         _ = try run(gh, ["release", "download", "v\(version)", "--repo", repo, "--pattern", zipName, "--dir", work.path])
         try installZip(work.appendingPathComponent(zipName), version: version, appURL: appURL,
                        requirement: requirement, bundleID: bundleID, work: work)
@@ -144,17 +144,17 @@ final class UpdateService: ObservableObject {
         let unpacked = work.appendingPathComponent("unpacked")
         _ = try run("/usr/bin/ditto", ["-x", "-k", zip.path, unpacked.path])
 
-        let newApp = unpacked.appendingPathComponent("Notch.app")
+        let newApp = unpacked.appendingPathComponent(UpdateRules.appName)
         guard let bundle = Bundle(url: newApp),
               bundle.bundleIdentifier == bundleID,
               (bundle.infoDictionary?["CFBundleShortVersionString"] as? String).flatMap(AppVersion.init(tag:)) == version
-        else { throw UpdateError("The download isn't the expected Notch version") }
+        else { throw UpdateError("The download isn't the expected Mantel version") }
         guard UpdateVerifier.satisfies(newApp, requirement: requirement) else {
-            throw UpdateError("The download isn't signed by Notch's release certificate")
+            throw UpdateError("The download isn't signed by Mantel's release certificate")
         }
         // The app may have been moved or renamed since it started; never write to whatever is there now.
         guard infoPlist(appURL)?["CFBundleIdentifier"] as? String == bundleID else {
-            throw UpdateError("Notch was moved or renamed; reopen it to update")
+            throw UpdateError("Mantel was moved or renamed; reopen it to update")
         }
         // New metadata only: the installed copy is exactly what was checked, nothing carried over.
         _ = try fm.replaceItemAt(appURL, withItemAt: newApp, backupItemName: nil, options: .usingNewMetadataOnly)
@@ -197,7 +197,7 @@ final class UpdateService: ObservableObject {
 
     /// Opens the new copy once this one has really quit (opening while it still runs would just
     /// bring the old one forward). Only quits if the reopen could be set up.
-    private static func relaunch(_ appURL: URL) {
+    static func relaunch(_ appURL: URL) {
         let opener = Process()
         opener.executableURL = URL(fileURLWithPath: "/bin/sh")
         // Path and process ID are passed as arguments, never pasted into the command. Waits up to 30 s.
@@ -207,7 +207,7 @@ final class UpdateService: ObservableObject {
             try opener.run()
             NSApp.terminate(nil)
         } catch {
-            log.error("Couldn't schedule the relaunch; the update applies next time Notch opens")
+            log.error("Couldn't schedule the relaunch; the update applies next time Mantel opens")
         }
     }
 }

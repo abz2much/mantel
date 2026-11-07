@@ -13,12 +13,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                        clipboard: clipboard, timer: timer)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if renameFromNotch() { return }
         controller.start()
         music.start()
         battery.start()
         clipboard.start()
         updates.start()
         Task { await calendar.start() }
+    }
+
+    /// The app used to be called Notch. An installed Notch.app (updated from before the rename) moves
+    /// itself to Mantel.app once and reopens from there. Its ID and signature are unchanged, so macOS
+    /// keeps its permissions. Returns true if it's reopening.
+    private func renameFromNotch() -> Bool {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        guard let target = UpdateRules.renameTarget(appURL: Bundle.main.bundleURL, home: home) else { return false }
+        do {
+            try FileManager.default.moveItem(at: Bundle.main.bundleURL, to: target)
+        } catch {
+            return false   // keep running as Notch.app; nothing is lost
+        }
+        UpdateService.relaunch(target)
+        return true
     }
 }
 
@@ -27,9 +43,11 @@ struct NotchApp: App {
     @NSApplicationDelegateAdaptor private var delegate: AppDelegate
 
     var body: some Scene {
-        MenuBarExtra("Notch", systemImage: "calendar.badge.clock") {
+        MenuBarExtra {
             MenuContent(calendar: delegate.calendar, music: delegate.music, battery: delegate.battery,
                         clipboard: delegate.clipboard, updates: delegate.updates)
+        } label: {
+            Image(nsImage: MenuBarIcon.image)
         }
         .menuBarExtraStyle(.menu)
     }
@@ -80,18 +98,18 @@ struct MenuContent: View {
         Button("Check for Updates Now") { updates.checkNow() }
             .disabled(updates.status == .checking)
         Divider()
-        Button("Quit Notch") { NSApplication.shared.terminate(nil) }
+        Button("Quit Mantel") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
     }
 
     private var updateLine: String {
-        let version = updates.currentVersion.map { "Notch \($0)" } ?? "Notch"
+        let version = updates.currentVersion.map { "Mantel \($0)" } ?? "Mantel"
         switch updates.status {
         case .notChecked: return version
         case .checking: return "\(version): checking for updates…"
         case .upToDate: return "\(version): up to date"
-        case .installing(let new): return "Installing Notch \(new)…"
-        case .available(let new): return "Notch \(new) is available: choose Check for Updates Now"
+        case .installing(let new): return "Installing Mantel \(new)…"
+        case .available(let new): return "Mantel \(new) is available: choose Check for Updates Now"
         case .unavailable(let reason), .failed(let reason): return "\(version): \(reason)"
         }
     }
