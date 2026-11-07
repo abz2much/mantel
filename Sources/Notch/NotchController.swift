@@ -11,23 +11,28 @@ final class NotchState: ObservableObject {
 
     @Published var event: MeetingEvent?
     @Published var content: Content = .music
+    /// The battery flash showing in the compact notch, if any, and when it started.
+    @Published var battery: BatteryAlert?
+    @Published var batteryShownAt: Date?
 }
 
-/// Decides what the notch shows (meeting > music > idle) and drives it.
+/// Decides what the notch shows (battery flash > meeting > music > idle) and drives it.
 @MainActor
 final class NotchController {
     private static let hoverDwell: TimeInterval = 0.3
     private static let hoverLeaveDelay: TimeInterval = 0.5
     private static let peekDuration: TimeInterval = 6
+    private static let batteryFlashDuration: TimeInterval = 3
 
     private static let log = Logger(subsystem: "local.notch.app", category: "notch")
 
-    private enum Mode: Equatable { case hidden, musicCompact, musicExpanded, idle, idleExpanded, meeting }
+    private enum Mode: Equatable { case hidden, musicCompact, musicExpanded, idle, idleExpanded, meeting, battery }
 
     private let calendar: CalendarService
     private let spotify: SpotifyService
+    private let battery: BatteryService
     private let state = NotchState()
-    private var notch: DynamicNotch<NotchRootView, MusicCompactLeading, MusicCompactTrailing>?
+    private var notch: DynamicNotch<NotchRootView, CompactLeading, CompactTrailing>?
 
     private var dismissed: Set<ReminderKey> = []
     private var currentReminder: ReminderKey?
@@ -41,10 +46,13 @@ final class NotchController {
     private var hoverCancellable: AnyCancellable?
     private var peekUntil: Date?
     private var timer: Timer?
+    private var batteryTimer: Timer?
 
-    init(calendar: CalendarService, spotify: SpotifyService) {
+    init(calendar: CalendarService, spotify: SpotifyService, battery: BatteryService) {
         self.calendar = calendar
         self.spotify = spotify
+        self.battery = battery
+        battery.onAlert = { [weak self] alert in self?.flashBattery(alert) }
         calendar.onUpdate = { [weak self] in self?.evaluate() }
         spotify.onChange = { [weak self] in self?.evaluate() }
         spotify.onPlay = { [weak self] in
@@ -71,8 +79,8 @@ final class NotchController {
                     onDismiss: { [weak self] in self?.dismissCurrent() }
                 )
             },
-            compactLeading: { [unowned self] in MusicCompactLeading(spotify: spotify) },
-            compactTrailing: { [unowned self] in MusicCompactTrailing(spotify: spotify) }
+            compactLeading: { [unowned self] in CompactLeading(state: state, spotify: spotify) },
+            compactTrailing: { [unowned self] in CompactTrailing(state: state, spotify: spotify) }
         )
         self.notch = notch
 
@@ -88,6 +96,23 @@ final class NotchController {
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.evaluate() }
         }
+    }
+
+    /// Shows the battery flash for a few seconds over whatever the notch shows, then puts that back.
+    private func flashBattery(_ alert: BatteryAlert) {
+        // Compact areas only exist beside a real notch; elsewhere there's nowhere to flash.
+        guard Self.targetScreen().hasNotchInset else { return }
+        state.battery = alert
+        state.batteryShownAt = Date()
+        batteryTimer?.invalidate()
+        batteryTimer = Timer.scheduledTimer(withTimeInterval: Self.batteryFlashDuration, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.state.battery = nil
+                self?.state.batteryShownAt = nil
+                self?.evaluate()
+            }
+        }
+        evaluate()
     }
 
     private func dismissCurrent() {
@@ -149,6 +174,7 @@ final class NotchController {
                 desired = .hidden
             }
         }
+        if state.battery != nil { desired = .battery }
         reconcile()
     }
 
@@ -172,7 +198,7 @@ final class NotchController {
         let screen = Self.targetScreen()
         switch mode {
         case .hidden: await notch?.hide()
-        case .musicCompact, .idle: await notch?.compact(on: screen)
+        case .musicCompact, .idle, .battery: await notch?.compact(on: screen)
         case .musicExpanded:
             state.content = .music
             await notch?.expand(on: screen)

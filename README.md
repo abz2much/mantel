@@ -50,9 +50,16 @@ With no music playing and no meeting coming up, **hover the notch** to see:
 
 To make this hoverable, the notch stays as a slightly wider black shape while idle.
 
+### Battery
+
+- **Plug in** and a green glow sweeps across the notch, then shows ⚡ and your battery level for 3 seconds.
+- **Low battery**: the same sweep in red at **20%** and again at **10%**, while on battery.
+- Each one shows once and then gets out of the way. It plays over the music card or a meeting reminder, which come back straight after.
+- A loose cable that reconnects within a few seconds only plays it once.
+
 ### Without a notch
 
-On a Mac or display without a notch there's no compact view or idle panel. The music card shows briefly whenever a song starts, and meeting reminders work as normal.
+On a Mac or display without a notch there's no compact view, idle panel or battery flash. The music card shows briefly whenever a song starts, and meeting reminders work as normal.
 
 ## Requirements
 
@@ -101,6 +108,7 @@ Click the menu bar icon to:
 - choose which **calendars** to watch;
 - turn the **music card** on or off;
 - turn **album art** on or off;
+- turn the **charging animation** and **low battery alert** on or off;
 - quit.
 
 ## Privacy
@@ -116,6 +124,7 @@ Click the menu bar icon to:
 swift build        # build
 swift test         # run the tests
 NOTCH_FAKE_SPOTIFY=1 build/Notch.app/Contents/MacOS/Notch   # fake playing track, no Spotify needed
+NOTCH_FAKE_BATTERY=1 build/Notch.app/Contents/MacOS/Notch   # fake plug-in, then a drop to 20%
 NOTCH_FAKE_SPOTIFY=1 NOTCH_SCREENSHOTS_DIR=docs/images swift test --filter Screenshots   # regenerate the README screenshots
 ```
 
