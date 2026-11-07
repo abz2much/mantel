@@ -60,7 +60,6 @@ A small macOS menu bar app that puts your next meeting and what's playing on Spo
   - Also skips copies from your iPhone (Universal Clipboard) and very large copies (over a million characters).
   - Turn it off, or clear it, from the menu bar.
 - **Today**: the meeting in progress (**Now**), the **Next** one with a countdown like "in 1h 20m", and up to three more, each with its calendar's colour and a **Join** button where there's a link. "No more meetings today" when your day is done.
-
 - **Timer**: start a **5, 15, 25 or 45-minute** timer. While it runs, the time left shows beside the notch, and the tab has **Pause**, **+1 min** and **Stop**.
   - When it ends, the notch drops down with **Time's up** and a chime for 10 seconds.
   - The 25-minute one is a **focus session**: when it ends, there's a button to start a **5-minute break**.

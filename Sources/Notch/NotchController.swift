@@ -62,7 +62,12 @@ final class NotchController {
         self.battery = battery
         self.clipboard = clipboard
         self.timerService = timer
-        timer.onChange = { [weak self] in self?.evaluate() }
+        timer.onChange = { [weak self] in
+            guard let self else { return }
+            evaluate()
+            // Hover was ignored while "Time's up" showed; if the pointer is still on the notch, open the panel.
+            if !timerService.doneShowing, notch?.isHovering == true { hoverChanged(true) }
+        }
         battery.onAlert = { [weak self] alert in self?.flashBattery(alert) }
         calendar.onUpdate = { [weak self] in self?.evaluate() }
         music.onChange = { [weak self] in self?.evaluate() }
@@ -107,7 +112,10 @@ final class NotchController {
 
         // Local tick only: starts/ends the meeting popup at the right second.
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.evaluate() }
+            MainActor.assumeIsolated {
+                self?.timerService.checkFinished()   // catches a countdown that ended while the Mac slept
+                self?.evaluate()
+            }
         }
     }
 
@@ -257,6 +265,7 @@ final class NotchController {
         case .timerDone:
             state.content = .timerDone
             await notch?.expand(on: screen)
+            timerService.doneAppeared()   // its 10 seconds start now it's actually on screen
         }
         keepKeyboardInFrontApp()
     }

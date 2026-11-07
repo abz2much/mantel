@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// What opens when you hover the notch: Music, Clipboard and Today tabs.
-/// All three tabs always show, in the same places, and the panel keeps one size on every tab.
+/// What opens when you hover the notch: Music, Clipboard, Today and Timer tabs.
+/// All four tabs always show, in the same places, and the panel keeps one size on every tab.
 struct HoverPanelView: View {
     @ObservedObject var state: NotchState
     @ObservedObject var music: MusicService

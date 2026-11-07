@@ -99,7 +99,13 @@ struct Screenshots {
         timer.start(minutes: 25)
         try save(notchShape(panel()), as: "timer-running.png")
         timer.stop()
-        try save(notchShape(TimerDoneView(timer: timer)), as: "timer-done.png")
+        // A finished focus session, so the popup shows its break button.
+        var clock = Date()
+        let finished = TimerService(now: { clock }, chime: {})
+        finished.start(minutes: 25)
+        clock = clock.addingTimeInterval(25 * 60)
+        finished.checkFinished()
+        try save(notchShape(TimerDoneView(timer: finished)), as: "timer-done.png")
     }
 
     /// The hover panel on one tab, with calendar data that doesn't come from the real calendar.

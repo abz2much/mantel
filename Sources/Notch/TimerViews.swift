@@ -33,12 +33,11 @@ struct TimerTabView: View {
     }
 
     private var running: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
+        TimelineView(.periodic(from: .now, by: 0.25)) { context in   // often enough to stay in step with the end
             VStack(spacing: 12) {
                 Text(Countdown.clock(timer.countdown.remaining(at: context.date)))
                     .font(.system(size: 40, weight: .semibold, design: .rounded).monospacedDigit())
                     .foregroundStyle(timer.countdown.isPaused ? .secondary : .primary)
-                    .contentTransition(.numericText(countsDown: true))
                 HStack(spacing: 10) {
                     if timer.countdown.isPaused {
                         control("Resume", "play.fill") { timer.resume() }
@@ -79,7 +78,7 @@ struct TimerDoneView: View {
             .frame(width: 40, height: 40)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Time's up").font(.headline)
-                Text(timer.doneOffersBreak ? "Focus session done" : "Your timer has finished")
+                Text(timer.doneWasBreak ? "Break's over" : timer.doneOffersBreak ? "Focus session done" : "Your timer has finished")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer(minLength: 20)
@@ -112,7 +111,7 @@ struct TimerCompactSide: View {
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(timer.countdown.isPaused ? .secondary : Color.orange)
         case .trailing:
-            TimelineView(.periodic(from: .now, by: 1)) { context in
+            TimelineView(.periodic(from: .now, by: 0.25)) { context in
                 Text(Countdown.clock(timer.countdown.remaining(at: context.date)))
                     .font(.system(size: 12, weight: .semibold).monospacedDigit())
                     .foregroundStyle(timer.countdown.isPaused ? .secondary : Color.orange)
