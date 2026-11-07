@@ -89,6 +89,7 @@ struct MenuContent: View {
         case .checking: return "\(version): checking for updates…"
         case .upToDate: return "\(version): up to date"
         case .installing(let new): return "Installing Notch \(new)…"
+        case .available(let new): return "Notch \(new) is available: choose Check for Updates Now"
         case .unavailable(let reason), .failed(let reason): return "\(version): \(reason)"
         }
     }

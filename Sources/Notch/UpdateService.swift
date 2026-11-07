@@ -14,6 +14,8 @@ final class UpdateService: ObservableObject {
         case checking
         case upToDate
         case installing(String)
+        /// A newer release exists but automatic installs are off.
+        case available(String)
         /// Updates can't run here; the reason is shown in the menu.
         case unavailable(String)
         case failed(String)
@@ -91,6 +93,8 @@ final class UpdateService: ObservableObject {
                     return .success(latest)
                 } catch let error as UpdateError {
                     return .failure(error)
+                } catch let error as CocoaError where error.code == .fileWriteNoPermission {
+                    return .failure(UpdateError("Can't replace Notch in Applications (permissions)"))
                 } catch {
                     return .failure(UpdateError("Update failed"))
                 }
@@ -104,7 +108,7 @@ final class UpdateService: ObservableObject {
                 Self.log.notice("Installed \(version.description, privacy: .public); relaunching")
                 Self.relaunch(appURL)
             case .success(let version?):
-                status = .failed("Notch \(version) is available: use Check for Updates")
+                status = .available(version.description)
             case .failure(let error):
                 Self.log.error("Update check failed: \(error.message, privacy: .public)")
                 status = .failed(error.message)
@@ -148,7 +152,18 @@ final class UpdateService: ObservableObject {
         guard UpdateVerifier.satisfies(newApp, requirement: requirement) else {
             throw UpdateError("The download isn't signed by Notch's release certificate")
         }
-        _ = try fm.replaceItemAt(appURL, withItemAt: newApp, backupItemName: nil, options: [])
+        // The app may have been moved or renamed since it started; never write to whatever is there now.
+        guard infoPlist(appURL)?["CFBundleIdentifier"] as? String == bundleID else {
+            throw UpdateError("Notch was moved or renamed; reopen it to update")
+        }
+        // New metadata only: the installed copy is exactly what was checked, nothing carried over.
+        _ = try fm.replaceItemAt(appURL, withItemAt: newApp, backupItemName: nil, options: .usingNewMetadataOnly)
+    }
+
+    /// Read straight from disk: `Bundle(url:)` caches per path, so it could describe what used to be there.
+    nonisolated static func infoPlist(_ app: URL) -> [String: Any]? {
+        guard let data = try? Data(contentsOf: app.appendingPathComponent("Contents/Info.plist")) else { return nil }
+        return try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
     }
 
     /// Runs a program with arguments (no shell) and returns what it printed; throws if it fails or hangs.
@@ -160,26 +175,47 @@ final class UpdateService: ObservableObject {
         process.standardOutput = out
         process.standardError = FileHandle.nullDevice
         try process.run()
-        // Stop it from outside if it hangs; reading below returns once it exits.
-        let watchdog = DispatchWorkItem { if process.isRunning { process.terminate() } }
+        // Stop it from outside if it hangs (asking first, then forcing); reading below returns once it exits.
+        let timedOut = TimeoutFlag()
+        let pid = process.processIdentifier
+        let watchdog = DispatchWorkItem {
+            guard process.isRunning else { return }
+            timedOut.set()
+            process.terminate()
+            DispatchQueue.global().asyncAfter(deadline: .now() + 5) { if process.isRunning { kill(pid, SIGKILL) } }
+        }
         DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: watchdog)
         let data = out.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
         watchdog.cancel()
-        if process.terminationReason == .uncaughtSignal { throw UpdateError("Timed out talking to GitHub") }
+        if timedOut.isSet { throw UpdateError(path.hasSuffix("/gh") ? "Timed out talking to GitHub" : "Timed out unpacking the update") }
         guard process.terminationStatus == 0 else {
             throw UpdateError(path.hasSuffix("/gh") ? "GitHub CLI failed (signed in? run: gh auth status)" : "Couldn't unpack the update")
         }
         return String(decoding: data, as: UTF8.self)
     }
 
-    /// Opens the new copy once this one has quit.
+    /// Opens the new copy once this one has really quit (opening while it still runs would just
+    /// bring the old one forward). Only quits if the reopen could be set up.
     private static func relaunch(_ appURL: URL) {
         let opener = Process()
         opener.executableURL = URL(fileURLWithPath: "/bin/sh")
-        // The path is passed as an argument, never pasted into the command.
-        opener.arguments = ["-c", "sleep 1; /usr/bin/open \"$0\"", appURL.path]
-        try? opener.run()
-        NSApp.terminate(nil)
+        // Path and process ID are passed as arguments, never pasted into the command. Waits up to 30 s.
+        opener.arguments = ["-c", "i=0; while kill -0 \"$1\" 2>/dev/null && [ $i -lt 150 ]; do sleep 0.2; i=$((i+1)); done; /usr/bin/open \"$0\"",
+                            appURL.path, String(getpid())]
+        do {
+            try opener.run()
+            NSApp.terminate(nil)
+        } catch {
+            log.error("Couldn't schedule the relaunch; the update applies next time Notch opens")
+        }
     }
+}
+
+/// Set once from the watchdog's queue, read after the process has exited.
+private final class TimeoutFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = false
+    func set() { lock.withLock { value = true } }
+    var isSet: Bool { lock.withLock { value } }
 }

@@ -67,9 +67,9 @@ jobs:
           security create-keychain -p "$KC_PASS" "$KC"
           security set-keychain-settings -lut 3600 "$KC"
           security unlock-keychain -p "$KC_PASS" "$KC"
+          trap 'rm -f "$RUNNER_TEMP/signing.p12"' EXIT
           echo "$P12" | base64 --decode > "$RUNNER_TEMP/signing.p12"
           security import "$RUNNER_TEMP/signing.p12" -k "$KC" -P "$P12_PASSWORD" -T /usr/bin/codesign
-          rm -f "$RUNNER_TEMP/signing.p12"
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KC_PASS" "$KC" >/dev/null
           echo "NOTCH_KEYCHAIN=$KC" >> "$GITHUB_ENV"
 
@@ -81,8 +81,13 @@ jobs:
           NOTCH_SIGN_IDENTITY: Notch Release Signing
         run: ./build.sh
 
-      - name: Check the signature
-        run: codesign -dr - build/Notch.app 2>&1 | grep -q 'certificate leaf' || { echo "::error::App isn't signed with the release certificate"; exit 1; }
+      # Installed copies only accept updates signed by this exact certificate (SHA-1 of the leaf).
+      # A different certificate would publish a release nobody can update to.
+      - name: Check it's signed with the release certificate
+        run: |
+          codesign -dr - build/Notch.app 2>&1 \
+            | grep -qF 'certificate leaf = H"19180d694e220d1d49ea3447a26528fcd16f1530"' \
+            || { echo "::error::App isn't signed with Notch's release certificate"; exit 1; }
 
       - name: Zip it
         run: ditto -c -k --keepParent build/Notch.app "Notch-$VERSION.zip"

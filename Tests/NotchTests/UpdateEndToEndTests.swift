@@ -35,7 +35,9 @@ struct UpdateInstallFixture {
         let zip = URL(fileURLWithPath: ProcessInfo.processInfo.environment["NOTCH_UPDATE_FIXTURE_ZIP"]!)
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("notch-e2e-\(UUID().uuidString)")
         let target = dir.appendingPathComponent("Notch.app")
-        try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: target.appendingPathComponent("Contents"), withIntermediateDirectories: true)
+        try PropertyListSerialization.data(fromPropertyList: ["CFBundleIdentifier": "local.notch.app"], format: .xml, options: 0)
+            .write(to: target.appendingPathComponent("Contents/Info.plist"))
         let work = dir.appendingPathComponent("work")
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
         let requirement = #"identifier "local.notch.app" and certificate leaf = H"19180d694e220d1d49ea3447a26528fcd16f1530""#
@@ -43,8 +45,7 @@ struct UpdateInstallFixture {
         try UpdateService.installZip(zip, version: AppVersion(9, 9, 9), appURL: target, requirement: requirement,
                                      bundleID: "local.notch.app", work: work)
 
-        let installed = try #require(Bundle(url: target))
-        #expect(installed.infoDictionary?["CFBundleShortVersionString"] as? String == "9.9.9")
+        #expect(UpdateService.infoPlist(target)?["CFBundleShortVersionString"] as? String == "9.9.9")
         #expect(UpdateVerifier.satisfies(target, requirement: requirement))
     }
 }
