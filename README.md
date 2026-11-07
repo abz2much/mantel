@@ -73,7 +73,14 @@ On a Mac or display without a notch there's no compact view, idle panel or batte
 
 1. Get **Notch-x.y.z.zip** from the [latest release](https://github.com/abz2much/notch/releases/latest) and open it.
 2. Drag **Notch.app** to your Applications folder, then open it.
-3. macOS blocks it the first time, because the app isn't from the App Store or a paid Apple developer account. Go to **System Settings → Privacy & Security**, scroll down, click **Open Anyway** and confirm.
+3. macOS blocks it the first time, because the app isn't from the App Store or a paid Apple developer account. Within the hour, go to **System Settings → Privacy & Security**, scroll down, click **Open Anyway** and confirm.
+4. Allow the permissions it asks for (see [Permissions](#permissions)).
+
+If macOS says the app **is damaged and can't be opened**, run this in Terminal, then open it again:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Notch.app
+```
 
 To update, quit Notch, replace the app in Applications and do step 3 again.
 
@@ -142,5 +149,6 @@ NOTCH_FAKE_SPOTIFY=1 NOTCH_SCREENSHOTS_DIR=docs/images swift test --filter Scree
 
 On GitHub, open **Actions → Release → Run workflow**, pick `main` and type a version such as `1.2.0`. The workflow runs the tests, builds the app for Apple Silicon and Intel, tags the commit `v1.2.0` and publishes a release with the zip attached.
 
+If a run fails while uploading, delete any leftover draft release on the Releases page before running it again.
 
 Built on [DynamicNotchKit](https://github.com/MrKai77/DynamicNotchKit).

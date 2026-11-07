@@ -37,8 +37,13 @@ jobs:
 
       - name: Check the version isn't taken
         run: |
-          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null; then
+          # ls-remote exits 0 if the tag exists, 2 if it doesn't, anything else if it couldn't look.
+          code=0
+          git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null || code=$?
+          if [[ $code -eq 0 ]]; then
             echo "::error::v$VERSION has already been released"; exit 1
+          elif [[ $code -ne 2 ]]; then
+            echo "::error::Couldn't check whether v$VERSION exists (git exit code $code)"; exit 1
           fi
 
       - name: Show toolchain
@@ -67,8 +72,12 @@ jobs:
           1. Download **Notch-VERSION.zip** below and open it.
           2. Drag **Notch.app** to your Applications folder, then open it.
           3. macOS blocks it the first time, because the app isn't from the App Store or a paid Apple developer account.
-             Go to **System Settings → Privacy & Security**, scroll down, click **Open Anyway** and confirm.
-          4. Allow **Calendars**, and **Spotify** when asked.
+             Within the hour, go to **System Settings → Privacy & Security**, scroll down, click **Open Anyway** and confirm.
+          4. Allow access to **Calendars**, and to control **Spotify** if asked.
+
+          If macOS says the app **is damaged and can't be opened**, run this in Terminal, then open it again:
+
+              xattr -dr com.apple.quarantine /Applications/Notch.app
 
           Updating: quit Notch, replace the app in Applications and do step 3 again.
           macOS may ask for the Calendars and Spotify permissions again.
