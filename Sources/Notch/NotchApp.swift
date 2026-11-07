@@ -6,12 +6,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let calendar = CalendarService()
     let music = MusicService()
     let battery = BatteryService()
-    private(set) lazy var controller = NotchController(calendar: calendar, music: music, battery: battery)
+    let clipboard = ClipboardService()
+    private(set) lazy var controller = NotchController(calendar: calendar, music: music, battery: battery, clipboard: clipboard)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         controller.start()
         music.start()
         battery.start()
+        clipboard.start()
         Task { await calendar.start() }
     }
 }
@@ -22,7 +24,7 @@ struct NotchApp: App {
 
     var body: some Scene {
         MenuBarExtra("Notch", systemImage: "calendar.badge.clock") {
-            MenuContent(calendar: delegate.calendar, music: delegate.music, battery: delegate.battery)
+            MenuContent(calendar: delegate.calendar, music: delegate.music, battery: delegate.battery, clipboard: delegate.clipboard)
         }
         .menuBarExtraStyle(.menu)
     }
@@ -32,6 +34,7 @@ struct MenuContent: View {
     @ObservedObject var calendar: CalendarService
     @ObservedObject var music: MusicService
     @ObservedObject var battery: BatteryService
+    @ObservedObject var clipboard: ClipboardService
 
     var body: some View {
         if !calendar.hasAccess {
@@ -61,6 +64,10 @@ struct MenuContent: View {
         Divider()
         Toggle("Charging animation", isOn: $battery.chargingAlertEnabled)
         Toggle("Low battery alert", isOn: $battery.lowAlertEnabled)
+        Divider()
+        Toggle("Clipboard history", isOn: $clipboard.enabled)
+        Button("Clear Clipboard History") { clipboard.clear() }
+            .disabled(!clipboard.enabled || clipboard.items.isEmpty)
         Divider()
         Button("Quit Notch") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
