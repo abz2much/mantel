@@ -22,11 +22,11 @@ import Testing
 
 @Test func onlyUpdatesAnInstalledCopy() {
     let home = URL(fileURLWithPath: "/Users/someone")
-    #expect(UpdateRules.canSelfUpdate(appURL: URL(fileURLWithPath: "/Applications/Notch.app"), home: home))
-    #expect(UpdateRules.canSelfUpdate(appURL: URL(fileURLWithPath: "/Users/someone/Applications/Notch.app"), home: home))
+    #expect(UpdateRules.canSelfUpdate(appURL: URL(fileURLWithPath: "/Applications/Mantel.app"), home: home))
+    #expect(UpdateRules.canSelfUpdate(appURL: URL(fileURLWithPath: "/Users/someone/Applications/Mantel.app"), home: home))
     // A copy built from source, or run from Downloads, is left alone.
-    #expect(!UpdateRules.canSelfUpdate(appURL: URL(fileURLWithPath: "/Users/someone/Dev/notch/build/Notch.app"), home: home))
-    #expect(!UpdateRules.canSelfUpdate(appURL: URL(fileURLWithPath: "/Users/someone/Downloads/Notch.app"), home: home))
+    #expect(!UpdateRules.canSelfUpdate(appURL: URL(fileURLWithPath: "/Users/someone/Dev/notch/build/Mantel.app"), home: home))
+    #expect(!UpdateRules.canSelfUpdate(appURL: URL(fileURLWithPath: "/Users/someone/Downloads/Mantel.app"), home: home))
 }
 
 @Test func findsTheGitHubCommandLineTool() {
@@ -36,19 +36,6 @@ import Testing
     #expect(UpdateRules.ghPath(exists: { _ in false }) == nil)
 }
 
-@Test func anOldNotchCopyInApplicationsIsRenamedToMantel() {
-    let home = URL(fileURLWithPath: "/Users/someone")
-    let target = UpdateRules.renameTarget(appURL: URL(fileURLWithPath: "/Applications/Notch.app"), home: home, exists: { _ in false })
-    #expect(target?.path == "/Applications/Mantel.app")
-}
-
-@Test func renamingLeavesAnythingElseAlone() {
-    let home = URL(fileURLWithPath: "/Users/someone")
-    // Already Mantel, built from source, or a Mantel.app already sitting there.
-    #expect(UpdateRules.renameTarget(appURL: URL(fileURLWithPath: "/Applications/Mantel.app"), home: home, exists: { _ in false }) == nil)
-    #expect(UpdateRules.renameTarget(appURL: URL(fileURLWithPath: "/Users/someone/Dev/build/Notch.app"), home: home, exists: { _ in false }) == nil)
-    #expect(UpdateRules.renameTarget(appURL: URL(fileURLWithPath: "/Applications/Notch.app"), home: home, exists: { _ in true }) == nil)
-}
 
 @Test func releaseDownloadsAreNamedMantel() {
     #expect(UpdateRules.zipName(AppVersion(1, 4, 0)) == "Mantel-1.4.0.zip")

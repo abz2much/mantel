@@ -1,12 +1,12 @@
 import AppKit
 import os
 
-/// Keeps an installed Notch up to date from the GitHub releases.
+/// Keeps an installed Mantel up to date from the GitHub releases.
 ///
 /// The repo is private, so downloads go through the GitHub command line tool (`gh`) and the user's own
 /// login. A download is installed only if it's a newer version signed with the same certificate as the
 /// running app. Files fetched by `gh` aren't marked as downloaded from the internet, so there's no
-/// "Open Anyway" step, and the unchanged signature means macOS keeps Notch's permissions.
+/// "Open Anyway" step, and the unchanged signature means macOS keeps Mantel's permissions.
 @MainActor
 final class UpdateService: ObservableObject {
     enum Status: Equatable {
