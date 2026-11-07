@@ -16,6 +16,17 @@ private final class FakePresenter: NotchPresenting {
     func tearDown() { calls.append("tearDown") }
 }
 
+/// Waits until `condition` holds (or 2 s pass), so timing tests don't depend on a fast machine.
+@MainActor
+private func eventually(_ condition: () -> Bool) async -> Bool {
+    let deadline = ContinuousClock.now + .seconds(2)
+    while ContinuousClock.now < deadline {
+        if condition() { return true }
+        try? await Task.sleep(for: .milliseconds(20))
+    }
+    return condition()
+}
+
 private let zone = CGRect(x: 2240, y: 877, width: 464, height: 3)
 private let insideZone = CGPoint(x: zone.midX, y: zone.midY)
 
@@ -31,8 +42,7 @@ private let insideZone = CGPoint(x: zone.midX, y: zone.midY)
     }
     stage.apply(.idle, perform: perform)
     stage.apply(.idleExpanded, perform: perform)
-    try await Task.sleep(for: .milliseconds(250))
-    #expect(fake.calls.last == "expand")
+    #expect(await eventually { fake.calls.last == "expand" })
     #expect(stage.applied == .idleExpanded)
 }
 
@@ -43,8 +53,9 @@ private let insideZone = CGPoint(x: zone.midX, y: zone.midY)
     stage.desired = .hidden
     stage.pointerMoved(to: insideZone, zone: zone)
     #expect(!stage.hoverExpanded)
-    try await Task.sleep(for: .milliseconds(350))
-    #expect(stage.hoverExpanded)
+    try await Task.sleep(for: .milliseconds(150))
+    #expect(!stage.hoverExpanded)   // still waiting out the 0.3 s dwell
+    #expect(await eventually { stage.hoverExpanded })
     #expect(changes == [true])
 }
 
@@ -53,12 +64,11 @@ private let insideZone = CGPoint(x: zone.midX, y: zone.midY)
     let stage = NotchStage(screenID: 2, presenter: FakePresenter(), onHoverExpandedChange: { _ in })
     stage.desired = .hidden
     stage.pointerMoved(to: insideZone, zone: zone)
-    try await Task.sleep(for: .milliseconds(350))
+    #expect(await eventually { stage.hoverExpanded })
     stage.pointerMoved(to: CGPoint(x: 0, y: 0), zone: zone)
-    try await Task.sleep(for: .milliseconds(300))
-    #expect(stage.hoverExpanded)
-    try await Task.sleep(for: .milliseconds(300))
-    #expect(!stage.hoverExpanded)
+    try await Task.sleep(for: .milliseconds(250))
+    #expect(stage.hoverExpanded)   // still within the 0.5 s leave delay
+    #expect(await eventually { !stage.hoverExpanded })
 }
 
 @Test func screensRebuiltOnDisplayChange() {

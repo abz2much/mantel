@@ -41,7 +41,8 @@ func presenterEndsInLatestState() async throws {
     p.request(.expanded, on: screen)
     p.request(.compact, on: screen)
     p.request(.hidden, on: screen)
-    try await Task.sleep(for: .seconds(NotchMotion.closeDuration + 0.2))
+    let deadline = ContinuousClock.now + .seconds(2)
+    while p.window != nil, ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(20)) }
     #expect(p.presentation == .hidden)
     #expect(p.window == nil)
 
