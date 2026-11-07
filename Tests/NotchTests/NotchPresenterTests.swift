@@ -74,3 +74,27 @@ func presenterEndsInLatestState() async throws {
     #expect(NotchDecision.glowColor(content: .meeting, tab: .music, accent: .red) == MantelStyle.glow)
     #expect(NotchDecision.glowColor(content: .panel, tab: .music, accent: nil) == MantelStyle.glow)
 }
+
+@MainActor
+@Test(.enabled(if: !NSScreen.screens.isEmpty))
+func pointerOverShapeHoversAndTakesClicks() async {
+    let p = makePresenter()
+    await p.expand(on: NSScreen.screens[0])
+    try? await Task.sleep(for: .seconds(0.1))
+    let shape = p.shapeFrameOnScreen
+    #expect(shape != .zero)
+    p.pointerMoved(to: CGPoint(x: shape.midX, y: shape.midY))
+    #expect(p.isHovering)
+    #expect(p.window?.ignoresMouseEvents == false)
+    p.pointerMoved(to: CGPoint(x: shape.minX - 10, y: shape.midY))
+    #expect(!p.isHovering)
+    #expect(p.window?.ignoresMouseEvents == true)
+    await p.hide()
+}
+
+@MainActor
+@Test func hideReturnsAtOnceWhenNothingShows() async {
+    let p = makePresenter()
+    let elapsed = await ContinuousClock().measure { await p.hide() }
+    #expect(elapsed < .milliseconds(50))
+}

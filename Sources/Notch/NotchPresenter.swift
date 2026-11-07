@@ -82,6 +82,7 @@ final class NotchPresenter<Expanded: View, Leading: View, Trailing: View>: Obser
 
     /// Waits while the pointer is still on the shape, then closes.
     func hide() async {
+        guard window != nil else { presentation = .hidden; return }
         while isHovering, window != nil {
             try? await Task.sleep(for: .seconds(0.1))
         }
@@ -142,9 +143,21 @@ final class NotchPresenter<Expanded: View, Leading: View, Trailing: View>: Obser
         }
     }
 
-    func setHovering(_ hovering: Bool) {
-        guard window != nil, presentation != .hidden, hovering != isHovering else { return }
-        isHovering = hovering
+    /// The pointer moved (screen coordinates). Over the black shape it hovers and the window takes clicks;
+    /// anywhere else, including the glow around the shape, clicks go straight to whatever is underneath.
+    func pointerMoved(to point: CGPoint) {
+        guard let window else { return }
+        let over = presentation != .hidden && shapeFrameOnScreen.contains(point)
+        if window.ignoresMouseEvents == over { window.ignoresMouseEvents = !over }
+        if over != isHovering { isHovering = over }
+    }
+
+    /// The black shape's frame in screen coordinates; zero when nothing is showing.
+    var shapeFrameOnScreen: CGRect {
+        guard let window, presentation != .hidden else { return .zero }
+        let rect = Self.shapeRect(presentation: presentation, metrics: metrics, contentSize: expandedSize,
+                                  sides: sideWidths, windowSize: window.frame.size)
+        return NotchGeometry.screenRect(windowRect: rect, windowFrame: window.frame)
     }
 
     // MARK: Click area
@@ -177,6 +190,7 @@ final class NotchPresenter<Expanded: View, Leading: View, Trailing: View>: Obser
         glowStrength = 0
         let frame = NotchGeometry.windowFrame(screenFrame: screen.frame)
         let panel = NotchPanel(frame: frame)
+        panel.ignoresMouseEvents = true   // until the pointer is over the shape
         let host = NotchHostingView(rootView: NotchSurface(presenter: self))
         host.hitRect = { [weak self] in
             MainActor.assumeIsolated {

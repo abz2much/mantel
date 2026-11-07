@@ -55,8 +55,6 @@ struct NotchSurface<Expanded: View, Leading: View, Trailing: View>: View {
         .clipShape(NotchShape(topRadius: radii.top, bottomRadius: radii.bottom))
         .shadow(color: presenter.glowColor.opacity(presenter.glowStrength), radius: 30 - 13 * presenter.glowStrength)
         .shadow(color: .black.opacity(shadow.opacity), radius: shadow.radius)
-        .contentShape(Rectangle())
-        .onHover { presenter.setHovering($0) }
         .offset(x: presenter.presentation == .compact
                 ? NotchGeometry.compactOffset(leading: presenter.sideWidths.leading, trailing: presenter.sideWidths.trailing)
                 : 0)

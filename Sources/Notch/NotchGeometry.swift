@@ -26,6 +26,12 @@ enum NotchGeometry {
                       width: size.width, height: size.height)
     }
 
+    /// Converts a rect inside the window (top-left origin) into screen coordinates (bottom-left origin).
+    static func screenRect(windowRect: CGRect, windowFrame: CGRect) -> CGRect {
+        CGRect(x: windowFrame.minX + windowRect.minX, y: windowFrame.maxY - windowRect.maxY,
+               width: windowRect.width, height: windowRect.height)
+    }
+
     /// Shifts the compact shape so the notch stays centred over the camera when the two sides differ in width.
     static func compactOffset(leading: CGFloat, trailing: CGFloat) -> CGFloat {
         (trailing - leading) / 2

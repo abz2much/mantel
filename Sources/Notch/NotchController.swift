@@ -50,6 +50,7 @@ final class NotchController {
     private var hoverTimer: Timer?
     private var hoverCancellable: AnyCancellable?
     private var glowCancellable: AnyCancellable?
+    private var pointer: PointerWatcher?
     private var peekUntil: Date?
     private var timer: Timer?
     private var batteryTimer: Timer?
@@ -116,6 +117,10 @@ final class NotchController {
             .sink { [weak self] hovering in
                 MainActor.assumeIsolated { self?.hoverChanged(hovering) }
             }
+
+        // Hover and click-through follow the pointer position.
+        pointer = PointerWatcher { [weak self] point in self?.notch?.pointerMoved(to: point) }
+        pointer?.start()
 
         // Local tick only: starts/ends the meeting popup at the right second.
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in

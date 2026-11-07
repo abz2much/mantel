@@ -37,3 +37,9 @@ private let laptop = CGRect(x: 0, y: 0, width: 1512, height: 982)
     #expect(NotchGeometry.compactOffset(leading: 40, trailing: 60) == 10)
     #expect(NotchGeometry.compactOffset(leading: 60, trailing: 40) == -10)
 }
+
+@Test func screenRectFlipsIntoScreenCoordinates() {
+    let r = NotchGeometry.screenRect(windowRect: CGRect(x: 161, y: 0, width: 434, height: 220),
+                                     windowFrame: CGRect(x: 378, y: 491, width: 756, height: 491))
+    #expect(r == CGRect(x: 539, y: 762, width: 434, height: 220))
+}
