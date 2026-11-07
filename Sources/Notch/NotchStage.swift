@@ -11,6 +11,8 @@ protocol NotchPresenting: AnyObject {
     func compact(on screen: NSScreen) async
     func hide() async
     func pointerMoved(to point: CGPoint)
+    /// Closes at once, without waiting for the pointer: the screen is gone.
+    func tearDown()
 }
 
 extension NotchPresenter: NotchPresenting {}
@@ -81,6 +83,14 @@ final class NotchStage {
                 }
             }
         }
+    }
+
+    /// The screen went away: stop timers and close the window now.
+    func tearDown() {
+        hoverTimer?.invalidate()
+        hoverTimer = nil
+        pointerInside = false
+        presenter.tearDown()
     }
 
     /// After an alert ends with the pointer still there, open the panel as if it had just arrived.

@@ -13,6 +13,7 @@ private final class FakePresenter: NotchPresenting {
     func compact(on screen: NSScreen) async { calls.append("compact"); try? await Task.sleep(for: .milliseconds(50)) }
     func hide() async { calls.append("hide") }
     func pointerMoved(to point: CGPoint) {}
+    func tearDown() { calls.append("tearDown") }
 }
 
 private let zone = CGRect(x: 2240, y: 877, width: 464, height: 3)
@@ -65,4 +66,15 @@ private let insideZone = CGPoint(x: zone.midX, y: zone.midY)
     let diff = NotchController.stageIDs(for: screens, current: [1, 3])
     #expect(diff.add == [2])
     #expect(diff.remove == [3])
+}
+
+@MainActor
+@Test func tearDownStopsPendingHover() async throws {
+    var changes: [Bool] = []
+    let stage = NotchStage(screenID: 2, presenter: FakePresenter(), onHoverExpandedChange: { changes.append($0) })
+    stage.desired = .hidden
+    stage.pointerMoved(to: insideZone, zone: zone)
+    stage.tearDown()
+    try await Task.sleep(for: .milliseconds(400))
+    #expect(changes.isEmpty)
 }

@@ -32,10 +32,11 @@ enum NotchGeometry {
                width: windowRect.width, height: windowRect.height)
     }
 
-    /// On a monitor, the strip at the very top centre that opens the panel: the panel's width plus a margin, 3 pt tall.
+    /// On a monitor, the strip at the very top centre that opens the panel: the panel's width plus a margin,
+    /// 3 pt tall, reaching 1 pt past the top so a pointer pressed against the edge (y == maxY) still counts.
     static func hoverZone(screenFrame: CGRect) -> CGRect {
         let width: CGFloat = 464, height: CGFloat = 3
-        return CGRect(x: screenFrame.midX - width / 2, y: screenFrame.maxY - height, width: width, height: height)
+        return CGRect(x: screenFrame.midX - width / 2, y: screenFrame.maxY - height, width: width, height: height + 1)
     }
 
     /// Shifts the compact shape so the notch stays centred over the camera when the two sides differ in width.

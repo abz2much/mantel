@@ -90,6 +90,12 @@ final class NotchPresenter<Expanded: View, Leading: View, Trailing: View>: Obser
         try? await Task.sleep(for: .seconds(NotchMotion.closeDuration + 0.02))
     }
 
+    /// Closes at once, without waiting for the pointer or animating.
+    func tearDown() {
+        generation += 1
+        closeWindow()
+    }
+
     /// Moves straight to `target`. Later requests win: a close that finishes after a re-open does nothing.
     func request(_ target: NotchPresentation, on screen: NSScreen?) {
         generation += 1
@@ -219,8 +225,11 @@ final class NotchPresenter<Expanded: View, Leading: View, Trailing: View>: Obser
     /// Displays changed: put the window back at the top of its screen, or the first screen if that one's gone.
     private func screensChanged() {
         guard let window else { return }
-        let screen = NSScreen.screens.first { $0.screenNumber == screenNumber } ?? NSScreen.screens.first
-        guard let screen else { return }
+        // Its screen is gone: close rather than jump to another screen (the controller drops this stage).
+        guard let screen = NSScreen.screens.first(where: { $0.screenNumber == screenNumber }) else {
+            tearDown()
+            return
+        }
         metrics = screen.notchMetrics
         screenNumber = screen.screenNumber
         window.setFrame(NotchGeometry.windowFrame(screenFrame: screen.frame), display: true)

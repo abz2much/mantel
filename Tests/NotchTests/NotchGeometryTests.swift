@@ -46,7 +46,7 @@ private let laptop = CGRect(x: 0, y: 0, width: 1512, height: 982)
 
 @Test func hoverZoneIsTopCentreStrip() {
     #expect(NotchGeometry.hoverZone(screenFrame: CGRect(x: 1512, y: -200, width: 1920, height: 1080))
-            == CGRect(x: 2240, y: 877, width: 464, height: 3))
+            == CGRect(x: 2240, y: 877, width: 464, height: 4))
 }
 
 @Test func flipFromWindowListCoordinates() {
@@ -71,4 +71,9 @@ private let twoScreens: [(id: Int, frame: CGRect)] = [
 
 @Test func activeScreenFallsBackToMouse() {
     #expect(ActiveScreen.pick(windowBounds: nil, mouse: CGPoint(x: 200, y: 300), screens: twoScreens) == 1)
+}
+
+@Test func hoverZoneIncludesTheTopEdge() {
+    let frame = CGRect(x: 1512, y: -200, width: 1920, height: 1080)
+    #expect(NotchGeometry.hoverZone(screenFrame: frame).contains(CGPoint(x: frame.midX, y: frame.maxY)))
 }

@@ -106,3 +106,26 @@ func pointerOverShapeHoversAndTakesClicks() async {
         sides: (leading: 180, trailing: 0), windowSize: CGSize(width: 1720, height: 720))
     #expect(tab.midX == 860)
 }
+
+@MainActor
+@Test(.enabled(if: !NSScreen.screens.isEmpty))
+func tearDownClosesAtOnceEvenWhileHovered() async {
+    let p = makePresenter()
+    await p.expand(on: NSScreen.screens[0])
+    try? await Task.sleep(for: .seconds(0.1))
+    let shape = p.shapeFrameOnScreen
+    p.pointerMoved(to: CGPoint(x: shape.midX, y: shape.midY))
+    #expect(p.isHovering)
+    p.tearDown()
+    #expect(p.window == nil)
+    #expect(!p.isHovering)
+}
+
+@MainActor
+@Test func watcherReportsAStillPointerToo() {
+    var moves = 0
+    let w = PointerWatcher(position: { CGPoint(x: 10, y: 10) }, onMove: { _ in moves += 1 })
+    w.tick()
+    w.tick()
+    #expect(moves == 2)
+}

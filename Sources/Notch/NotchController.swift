@@ -135,8 +135,7 @@ final class NotchController {
         let infos = Self.screenInfos()
         let diff = Self.stageIDs(for: infos, current: Array(stages.keys))
         for id in diff.remove {
-            guard let stage = stages.removeValue(forKey: id) else { continue }
-            Task { await stage.presenter.hide() }
+            stages.removeValue(forKey: id)?.tearDown()
         }
         for info in infos where diff.add.contains(info.id) {
             stages[info.id] = makeStage(info)

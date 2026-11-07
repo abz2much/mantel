@@ -50,7 +50,8 @@ enum NotchDecision {
 
     /// False when the hover panel must close: a meeting or "Time's up" takes over, or there's nowhere to hover.
     static func keepsHoverExpanded(_ i: NotchInputs) -> Bool {
-        if i.isAlertScreen && (i.hasReminder || i.timerDoneShowing) { return false }
+        // On every screen: the shared panel view can only show one thing, and the alert needs it.
+        if i.hasReminder || i.timerDoneShowing { return false }
         if !i.screenHasNotch && !i.monitorsEnabled { return false }
         return i.hoverExpanded
     }

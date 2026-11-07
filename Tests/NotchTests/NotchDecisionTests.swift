@@ -90,3 +90,8 @@ import Testing
     #expect(NotchDecision.alertScreen(screens: monitorsOnly, active: 3, monitorsEnabled: false) == 2)
     #expect(NotchDecision.alertScreen(screens: [], active: nil, monitorsEnabled: true) == nil)
 }
+
+@Test func alertsCloseHoverOnEveryScreen() {
+    #expect(!NotchDecision.keepsHoverExpanded(NotchInputs(hasReminder: true, hoverExpanded: true, isAlertScreen: false)))
+    #expect(!NotchDecision.keepsHoverExpanded(NotchInputs(hoverExpanded: true, isAlertScreen: false, timerDoneShowing: true)))
+}
