@@ -2,19 +2,19 @@ import Foundation
 import Testing
 @testable import Notch
 
-/// A zipped Notch.app with the given ID and version, ad-hoc signed, in a fresh temp folder.
+/// A zipped Mantel.app with the given ID and version, ad-hoc signed, in a fresh temp folder.
 private func zippedApp(id: String, version: String) throws -> (zip: URL, dir: URL) {
     let fm = FileManager.default
     let dir = fm.temporaryDirectory.appendingPathComponent("notch-install-\(UUID().uuidString)")
-    let app = dir.appendingPathComponent("src/Notch.app/Contents")
+    let app = dir.appendingPathComponent("src/Mantel.app/Contents")
     try fm.createDirectory(at: app.appendingPathComponent("MacOS"), withIntermediateDirectories: true)
     try fm.copyItem(at: URL(fileURLWithPath: "/usr/bin/true"), to: app.appendingPathComponent("MacOS/Notch"))
     let plist: [String: Any] = ["CFBundleIdentifier": id, "CFBundleShortVersionString": version,
                                 "CFBundleExecutable": "Notch", "CFBundlePackageType": "APPL"]
     try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
         .write(to: app.appendingPathComponent("Info.plist"))
-    for (tool, args) in [("/usr/bin/codesign", ["--force", "--sign", "-", dir.appendingPathComponent("src/Notch.app").path]),
-                         ("/usr/bin/ditto", ["-c", "-k", "--keepParent", dir.appendingPathComponent("src/Notch.app").path,
+    for (tool, args) in [("/usr/bin/codesign", ["--force", "--sign", "-", dir.appendingPathComponent("src/Mantel.app").path]),
+                         ("/usr/bin/ditto", ["-c", "-k", "--keepParent", dir.appendingPathComponent("src/Mantel.app").path,
                                              dir.appendingPathComponent("update.zip").path])] {
         let p = Process(); p.executableURL = URL(fileURLWithPath: tool); p.arguments = args
         p.standardError = FileHandle.nullDevice
@@ -44,7 +44,7 @@ private func install(_ zip: URL, version: AppVersion, over app: URL, dir: URL) t
     let (zip, dir) = try zippedApp(id: "local.notch.app", version: "1.0.0")
     let app = try target(in: dir)
     let error = #expect(throws: UpdateService.UpdateError.self) { try install(zip, version: AppVersion(2, 0, 0), over: app, dir: dir) }
-    #expect(error?.message == "The download isn't the expected Notch version")
+    #expect(error?.message == "The download isn't the expected Mantel version")
     #expect(FileManager.default.fileExists(atPath: app.appendingPathComponent("original").path))
 }
 
@@ -52,7 +52,7 @@ private func install(_ zip: URL, version: AppVersion, over app: URL, dir: URL) t
     let (zip, dir) = try zippedApp(id: "com.example.other", version: "2.0.0")
     let app = try target(in: dir)
     let error = #expect(throws: UpdateService.UpdateError.self) { try install(zip, version: AppVersion(2, 0, 0), over: app, dir: dir) }
-    #expect(error?.message == "The download isn't the expected Notch version")
+    #expect(error?.message == "The download isn't the expected Mantel version")
     #expect(FileManager.default.fileExists(atPath: app.appendingPathComponent("original").path))
 }
 
@@ -60,7 +60,7 @@ private func install(_ zip: URL, version: AppVersion, over app: URL, dir: URL) t
     let (zip, dir) = try zippedApp(id: "local.notch.app", version: "2.0.0")
     let missing = dir.appendingPathComponent("installed/Notch.app")   // never created
     let error = #expect(throws: UpdateService.UpdateError.self) { try install(zip, version: AppVersion(2, 0, 0), over: missing, dir: dir) }
-    #expect(error?.message == "Notch was moved or renamed; reopen it to update")
+    #expect(error?.message == "Mantel was moved or renamed; reopen it to update")
 }
 
 @Test func installsAMatchingUpdateWithOnlyItsOwnFiles() throws {

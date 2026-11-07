@@ -3,8 +3,9 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key><string>local.notch.app</string>
-    <key>CFBundleName</key><string>Notch</string>
-    <key>CFBundleDisplayName</key><string>Notch</string>
+    <key>CFBundleName</key><string>Mantel</string>
+    <key>CFBundleDisplayName</key><string>Mantel</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundleExecutable</key><string>Notch</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>1.0</string>
@@ -13,8 +14,8 @@
     <key>LSUIElement</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSCalendarsFullAccessUsageDescription</key>
-    <string>Notch reads your calendar events (read-only) to show a reminder before meetings.</string>
+    <string>Mantel reads your calendar events (read-only) to show a reminder before meetings.</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Notch controls Spotify and Apple Music (play/pause, next, previous, seek) and reads the current track to show it in the notch.</string>
+    <string>Mantel controls Spotify and Apple Music (play/pause, next, previous, seek) and reads the current track to show it in the notch.</string>
 </dict>
 </plist>
