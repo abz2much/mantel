@@ -80,4 +80,3 @@ cd mantel
 
 That produces `build/Mantel.app`. Testing, debugging tricks and how releases work are covered in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-Mantel is built on [DynamicNotchKit](https://github.com/MrKai77/DynamicNotchKit).

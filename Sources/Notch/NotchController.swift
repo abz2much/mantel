@@ -1,6 +1,5 @@
 import AppKit
 import Combine
-import DynamicNotchKit
 import SwiftUI
 import os
 
@@ -38,7 +37,7 @@ final class NotchController {
     private let clipboard: ClipboardService
     private let timerService: TimerService
     private let state = NotchState()
-    private var notch: DynamicNotch<NotchRootView, CompactLeading, CompactTrailing>?
+    private var notch: NotchPresenter<NotchRootView, CompactLeading, CompactTrailing>?
 
     private var dismissed: Set<ReminderKey> = []
     private var currentReminder: ReminderKey?
@@ -78,9 +77,7 @@ final class NotchController {
     }
 
     func start() {
-        let notch = DynamicNotch(
-            hoverBehavior: [.keepVisible, .increaseShadow],
-            style: .auto,
+        let notch = NotchPresenter(
             expanded: { [unowned self] in
                 NotchRootView(
                     state: state,
@@ -95,12 +92,16 @@ final class NotchController {
                     onDismiss: { [weak self] in self?.dismissCurrent() }
                 )
             },
-            compactLeading: { [unowned self] in CompactLeading(state: state, music: music, timer: timerService) },
-            compactTrailing: { [unowned self] in CompactTrailing(state: state, music: music, timer: timerService) }
+            leading: { [unowned self] in CompactLeading(state: state, music: music, timer: timerService) },
+            trailing: { [unowned self] in CompactTrailing(state: state, music: music, timer: timerService) },
+            // The flash and glow take the album's colour on the Music tab, as the panel's own glow does.
+            glow: { [unowned self] in
+                (state.content == .panel && state.tab == .music ? music.accent : nil) ?? MantelStyle.glow
+            }
         )
         self.notch = notch
 
-        // Hover state comes from DynamicNotchKit's view; the dwell/leave timing and expansion are ours.
+        // Hover state comes from the notch's view; the dwell/leave timing and expansion are ours.
         hoverCancellable = notch.$isHovering
             .removeDuplicates()
             .receive(on: RunLoop.main)
@@ -225,10 +226,10 @@ final class NotchController {
     }
 
     /// The notch's window can take the keyboard; by default a click there keeps it, so ⌘V straight after
-    /// clicking a clipboard row would land in Notch. This keeps it only when something needs typing.
-    /// The window is rebuilt each time the notch shows, so it's set after every show.
+    /// clicking a clipboard row would land in Mantel. This keeps it only when something needs typing.
+    /// `NotchPanel` sets it too; this is a guard in case the window is ever rebuilt differently.
     private func keepKeyboardInFrontApp() {
-        (notch?.windowController?.window as? NSPanel)?.becomesKeyOnlyIfNeeded = true
+        notch?.window?.becomesKeyOnlyIfNeeded = true
     }
 
     private func perform(_ mode: NotchMode) async {
@@ -261,10 +262,10 @@ final class NotchController {
 
     /// Prefer the built-in display (the one with a notch); otherwise the main screen.
     private static func targetScreen() -> NSScreen {
-        NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.screens[0]
+        NSScreen.screens.first { $0.notchMetrics.hasNotch } ?? NSScreen.screens[0]
     }
 }
 
 private extension NSScreen {
-    var hasNotchInset: Bool { safeAreaInsets.top > 0 }
+    var hasNotchInset: Bool { notchMetrics.hasNotch }
 }

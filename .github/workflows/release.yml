@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   release:
-    runs-on: macos-15   # Xcode 16+: DynamicNotchKit needs Swift 6, the tests use Swift Testing
+    runs-on: macos-15   # Xcode 16+: the tests use Swift Testing
     timeout-minutes: 30
     env:
       VERSION: ${{ inputs.version }}
