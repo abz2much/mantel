@@ -2,116 +2,75 @@
 
 <p align="center"><img src="docs/images/app-icon.png" width="128" alt="Mantel's icon: the notch resting on a warm brass shelf"></p>
 
-A small macOS menu bar app that keeps what you need at the top of your screen, in the MacBook notch: your next meeting, what's playing on Spotify or Apple Music, your recent copies, a timer and battery alerts. So you're on time and miss nothing.
+Mantel is a small Mac app that lives in your MacBook's notch. It tells you when a meeting is about to start, shows what's playing on Spotify or Apple Music, keeps your last few copies close by, runs a timer, and lets you know when you plug in or your battery runs low. It's there so you're on time and don't miss anything.
 
 <p align="center">
-  <img src="docs/images/music-tab.png" width="480" alt="Hover panel on the Music tab: album art, glow, progress bar and controls">
-</p>
-<p align="center">
-  <img src="docs/images/meeting.png" width="560" alt="Meeting popup counting down to a Zoom call with a Join button">
-</p>
-<p align="center">
-  <img src="docs/images/clipboard.png" width="480" alt="Hover panel on the Clipboard tab: recent copies with how long ago">
-</p>
-<p align="center">
-  <img src="docs/images/idle-panel.png" width="480" alt="Hover panel on the Today tab: today's meetings with Join buttons">
-</p>
-<p align="center">
-  <img src="docs/images/timer-running.png" width="480" alt="Hover panel on the Timer tab: a 25-minute countdown with Pause, +1 min and Stop">
-</p>
-<p align="center">
-  <img src="docs/images/compact.png" width="320" alt="Compact view: a tiny album cover and waveform either side of the notch">
+  <img src="docs/images/music-tab.png" width="480" alt="The panel open on the Music tab, with album art, a progress bar and controls">
 </p>
 
-<sub>Screenshots are rendered from the app's own views with made-up data.</sub>
+## What it does
 
-## Features
+Five minutes before a meeting, the notch drops down with a countdown, and it comes back for the final minute. If the invite has a Google Meet, Zoom or Teams link, there's a Join button right there. Meetings you've declined are left out.
 
-### Meeting countdown
+While music plays, a small cover sits beside the notch. Hover over the notch and a panel opens with four tabs. Music has the full player, with album art and a progress bar you can drag. Clipboard lists the last ten things you copied, and clicking one puts it back on your clipboard so you can paste it. Today shows the rest of your meetings for the day. Timer runs a 5, 15, 25 or 45 minute countdown, and the 25 minute one is a focus session that offers you a short break when it ends.
 
-- Pops out of the notch **5 minutes before** a meeting (for 10 seconds), then again for the **final minute**, staying up until a minute after the start.
-- A ring drains as the meeting gets closer. The countdown turns orange in the last minute and red in the last 10 seconds.
-- **Join button** for Google Meet, Zoom and Microsoft Teams links, found in the event's URL, location or notes. It pulses as the meeting starts.
-- **✕ hides only the reminder showing**: dismiss the 5-minute one and you still get the final-minute one.
-- Skips meetings you've **declined**, all-day events and cancelled events.
-- When two meetings overlap, the one that **hasn't started yet** wins.
-- Tinted with the **calendar's colour**, so work and personal meetings look different.
-- Choose which calendars to watch in Settings.
+When you plug in, a green glow sweeps across the notch with your battery level. If you're running low, you get the same sweep in red at 20% and again at 10%.
 
-### Music card (Spotify and Apple Music)
+<table>
+  <tr>
+    <td><img src="docs/images/meeting.png" alt="A meeting reminder counting down to a Zoom call, with a Join button"></td>
+    <td><img src="docs/images/clipboard.png" alt="The Clipboard tab listing recent copies"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/timer-running.png" alt="The Timer tab with a 25 minute countdown"></td>
+    <td><img src="docs/images/idle-panel.png" alt="The Today tab listing the rest of today's meetings"></td>
+  </tr>
+</table>
 
-- A small cover (or music note) sits beside the notch while Spotify or Apple Music plays. **Hover** and the panel opens on the Music tab.
-- Title and artist, with long titles **scrolling** instead of being cut off.
-- **Play/pause, next and previous.**
-- **Progress bar you can click or drag** to jump to any point in the song.
-- Live radio (such as Apple Music radio) shows **LIVE** instead, since there's no length to seek in. Radio often has no cover.
-- Optional **album art** with a **glow** and accent colours taken from the cover.
-- Smooth transitions between songs; the cover sits back slightly when paused.
-- Hides itself after 2 minutes paused, and when the app quits.
-- **Both apps open?** The card shows the one that's playing. If both are playing, the one that started last; if both are paused, the one you used last.
+<sub>The screenshots are drawn from the app's own views using made-up data.</sub>
 
-### Hover panel: Music, Clipboard, Today, Timer
+On a screen without a notch, such as an external display, you still get meeting reminders and a short peek at each new song. The hover panel and the battery alerts need a notch.
 
-**Hover the notch** to open a panel with four tabs. It opens on the tab you used last, and stays the same size on every tab.
+## Installing
 
-- **Music**: the full music card, playing or paused, or "Nothing playing".
-- **Clipboard**: your last 10 text copies, newest first. **Click one** to put it back on the clipboard, then press ⌘V where you want it.
-  - Text only. Copying the same thing again moves it to the top.
-  - Kept **in memory only**: nothing is saved, and the list is gone when Mantel quits.
-  - Skips anything password managers mark as private, one-time codes and other temporary copies, and copied files.
-  - Also skips copies from your iPhone (Universal Clipboard) and very large copies (over a million characters).
-  - Turn it off, or clear it, in Settings.
-- **Today**: the meeting in progress (**Now**), the **Next** one with a countdown like "in 1h 20m", and up to three more, each with its calendar's colour and a **Join** button where there's a link. "No more meetings today" when your day is done.
-- **Timer**: start a **5, 15, 25 or 45-minute** timer. While it runs, the time left shows beside the notch, and the tab has **Pause**, **+1 min** and **Stop**.
-  - When it ends, the notch drops down with **Time's up** and a chime for 10 seconds.
-  - The 25-minute one is a **focus session**: when it ends, there's a button to start a **5-minute break**.
-  - Meeting reminders and the charging flash still come first.
+You'll need macOS 14 Sonoma or later. Mantel works with the Spotify desktop app and with Apple Music.
 
-To make this hoverable, the notch stays as a slightly wider black shape while idle.
+1. Download the latest `Mantel-x.y.z.zip` from the [Releases page](https://github.com/abz2much/notch/releases/latest) and open it.
+2. Drag Mantel to your Applications folder and open it.
+3. macOS will block it the first time, because Mantel isn't from the App Store. Go to System Settings, then Privacy & Security, scroll down and click Open Anyway. You need to do this within an hour of trying to open it.
+4. Mantel then asks for a couple of permissions. Calendar access lets it read your meetings, and it never changes them. Permission to control Spotify or Music lets it show the current song and handle play, pause and skip.
 
-### Battery
+Mantel adds itself to your login items the first time it runs, so it starts whenever you log in.
 
-- **Plug in** and a green glow sweeps across the notch, then shows ⚡ and your battery level for 3 seconds.
-- **Low battery**: the same sweep in red at **20%** and again at **10%**, while on battery.
-- Each one shows once and then gets out of the way. It plays over the music card or a meeting reminder, which come back straight after.
-- A loose cable that reconnects within a few seconds only plays it once.
+### Updates
 
-### Without a notch
+Mantel keeps itself up to date. It checks for new versions in the background, installs them and reopens, and your permissions carry over. Because this repository is private, it downloads updates through the GitHub command line tool, so you'll need that installed and signed in. Run `brew install gh` and then `gh auth login` once. You can also check by hand at any time from the menu.
 
-On a Mac or display without a notch there's no compact view, hover panel (so no clipboard history) or battery flash. The music card shows briefly whenever a song starts, and meeting reminders work as normal.
+## Settings
 
-## Requirements
+The menu bar icon gives you the update status, a way to check for updates, Settings and Quit. If something needs your attention, like calendar access being turned off, a warning with a button to fix it appears at the top.
 
-- macOS 14 Sonoma or later. Made for MacBooks with a notch, but works on any Mac.
-- The **Spotify desktop app** or **Apple Music**, for the music card.
-- Only if you build it yourself: **Xcode 16 or later**. On recent macOS the command line tools alone aren't enough.
+In Settings you can choose whether Mantel opens at login and installs updates automatically. You can also turn the music card, album art, battery alerts and clipboard history on or off, and pick which calendars to watch.
 
-## Install
+## Privacy
 
-### Download
+Mantel only reads your calendar and never edits it. It talks to Spotify and Music only while they're already open, and it never launches them. Clipboard history stays in memory, so it's gone when Mantel quits, and anything a password manager marks as private is skipped. Album art is off by default. When you turn it on, Spotify covers come from Spotify's image server and Apple Music covers come from the Music app itself. Nothing else leaves your Mac, and song titles are never written to logs.
 
-1. Get **Mantel-x.y.z.zip** from the [latest release](https://github.com/abz2much/notch/releases/latest) and open it.
-2. Drag **Mantel.app** to your Applications folder, then open it.
-3. macOS blocks it the first time, because the app isn't from the App Store or a paid Apple developer account. Within the hour, go to **System Settings → Privacy & Security**, scroll down, click **Open Anyway** and confirm.
-4. Allow the permissions it asks for (see [Permissions](#permissions)).
+## Troubleshooting
 
-If macOS says the app **is damaged and can't be opened**, run this in Terminal, then open it again:
+If macOS says Mantel is damaged and can't be opened, run this in Terminal and then open it again:
 
 ```sh
 xattr -dr com.apple.quarantine /Applications/Mantel.app
 ```
 
-### Updates
+If you said no to a permission by mistake, a warning appears in Mantel's menu with a button that takes you to the right page in System Settings.
 
-Once installed in Applications, Mantel **updates itself**: it checks a minute after starting and every 6 hours, downloads a newer release, checks it's signed by Mantel's release certificate, swaps it in and reopens. There's no Open Anyway step, and macOS keeps Mantel's permissions.
+If the menu says updates need the GitHub CLI, install it with `brew install gh` and sign in with `gh auth login`.
 
-- The repo is private, so updates download through the **GitHub CLI** (`gh`) with your own login. Install it with Homebrew (`brew install gh`) and run `gh auth login` once.
-- Turn **Install Updates Automatically** off in Settings to only update when you choose **Check for Updates Now** in the menu.
-- Updates only start from a release signed this way (1.3.0 or later). If you're on an older version, install the latest release by hand once, as above.
+## Building it yourself
 
-### Build it yourself
-
-If you have Xcode, you can build it from source instead. It takes about a minute.
+You can build Mantel from source if you have Xcode 16 or later. The command line tools on their own aren't enough on recent versions of macOS.
 
 ```sh
 git clone https://github.com/abz2much/notch.git
@@ -119,66 +78,6 @@ cd notch
 ./build.sh
 ```
 
-This builds `build/Mantel.app`. Move it to Applications and open it:
+That produces `build/Mantel.app`. Testing, debugging tricks and how releases work are covered in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-```sh
-mv build/Mantel.app /Applications/
-open /Applications/Mantel.app
-```
-
-Mantel's icon (the notch on a shelf) appears in the menu bar. There's no Dock icon.
-
-### Permissions
-
-macOS asks for these permissions, each the first time it's needed:
-
-- **Calendars**: to read your events. Mantel never creates, changes or deletes them.
-- **Automation → Spotify** and **Automation → Music**: to show the current track and control playback. Asked the first time each app is running.
-
-If you said no by accident, the menu bar menu has a shortcut to the right System Settings page.
-
-Updates keep these permissions. A copy you build yourself may ask again each time you rebuild.
-
-### Start at login
-
-Mantel adds itself to **System Settings → General → Login Items** the first time it opens from Applications, so it starts when you log in. Turn **Open at Login** off in Settings if you'd rather it didn't.
-
-## Using it
-
-Click the menu bar icon for:
-
-- anything that needs your attention, such as calendar access being off, with a button to fix it;
-- the version and update status, and **Check for Updates Now**;
-- **Settings…** (or ⌘, while the menu is open), with three sections:
-  - **General**: Open at Login, Install Updates Automatically;
-  - **Features**: music card, album art, charging animation, low battery alert, clipboard history (and clearing it);
-  - **Calendars**: which calendars to watch;
-- quit.
-
-## Privacy
-
-- **Calendar access is read-only.**
-- **Mantel never launches Spotify or Apple Music** and only talks to them while they're already running.
-- **Album art is off by default.** When on, Mantel downloads Spotify covers from Spotify's image server (`i.scdn.co`) only, with no cookies. Apple Music covers are read from the Music app itself, with no download. Nothing else goes online.
-- Song titles and artists are never written to logs.
-- **Clipboard history stays in memory** and is never saved or logged. Private and temporary copies (passwords, one-time codes) are skipped.
-
-## Development
-
-```sh
-swift build        # build
-swift test         # run the tests
-NOTCH_FAKE_SPOTIFY=1 build/Mantel.app/Contents/MacOS/Notch   # fake playing track, no Spotify needed
-NOTCH_FAKE_BATTERY=1 build/Mantel.app/Contents/MacOS/Notch   # fake plug-in, then a drop to 20%
-NOTCH_FAKE_SPOTIFY=1 NOTCH_SCREENSHOTS_DIR=docs/images swift test --filter Screenshots   # regenerate the README screenshots
-```
-
-### Releasing
-
-On GitHub, open **Actions → Release → Run workflow**, pick `main` and type a version such as `1.2.0`. The workflow runs the tests, builds the app for Apple Silicon and Intel, signs it, tags the commit `v1.2.0` and publishes a release with `Mantel-X.zip` attached.
-
-Releases are signed with a self-signed certificate kept in the repo secrets `NOTCH_SIGNING_P12` (the .p12 file, base64) and `NOTCH_SIGNING_PASSWORD`. Every release must use the same certificate (SHA-1 `19180d694e220d1d49ea3447a26528fcd16f1530`, which the workflow checks): installed copies only accept updates signed with it, and macOS ties Mantel's permissions to it. Local builds stay ad-hoc signed.
-
-If a run fails while uploading, delete any leftover draft release on the Releases page before running it again.
-
-Built on [DynamicNotchKit](https://github.com/MrKai77/DynamicNotchKit).
+Mantel is built on [DynamicNotchKit](https://github.com/MrKai77/DynamicNotchKit).
