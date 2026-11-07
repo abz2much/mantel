@@ -1,6 +1,6 @@
 # Notch
 
-A small macOS menu bar app that puts your next meeting and what's playing on Spotify into the MacBook notch.
+A small macOS menu bar app that puts your next meeting and what's playing on Spotify or Apple Music into the MacBook notch.
 
 <p align="center">
   <img src="docs/images/music-card.png" width="480" alt="Expanded music card with album art, glow, progress bar and controls">
@@ -30,15 +30,17 @@ A small macOS menu bar app that puts your next meeting and what's playing on Spo
 - Tinted with the **calendar's colour**, so work and personal meetings look different.
 - Choose which calendars to watch from the menu bar.
 
-### Spotify card
+### Music card (Spotify and Apple Music)
 
-- A small cover (or music note) sits beside the notch while Spotify plays. **Hover** to open the full card.
+- A small cover (or music note) sits beside the notch while Spotify or Apple Music plays. **Hover** to open the full card.
 - Title and artist, with long titles **scrolling** instead of being cut off.
 - **Play/pause, next and previous.**
 - **Progress bar you can click or drag** to jump to any point in the song.
+- Live radio (such as Apple Music radio) shows **LIVE** instead, since there's no length to seek in. Radio often has no cover.
 - Optional **album art** with a **glow** and accent colours taken from the cover.
 - Smooth transitions between songs; the cover sits back slightly when paused.
-- Hides itself after 2 minutes paused, and when Spotify quits.
+- Hides itself after 2 minutes paused, and when the app quits.
+- **Both apps open?** The card shows the one that's playing. If both are playing, the one that started last; if both are paused, the one you used last.
 
 ### When nothing's happening
 
@@ -64,7 +66,7 @@ On a Mac or display without a notch there's no compact view, idle panel or batte
 ## Requirements
 
 - macOS 14 Sonoma or later. Made for MacBooks with a notch, but works on any Mac.
-- The **Spotify desktop app**, for the music card.
+- The **Spotify desktop app** or **Apple Music**, for the music card.
 - Only if you build it yourself: **Xcode 16 or later**. On recent macOS the command line tools alone aren't enough.
 
 ## Install
@@ -105,10 +107,10 @@ A calendar-with-clock icon appears in the menu bar. There's no Dock icon.
 
 ### Permissions
 
-On first launch macOS asks for two permissions:
+macOS asks for these permissions, each the first time it's needed:
 
 - **Calendars**: to read your events. Notch never creates, changes or deletes them.
-- **Automation → Spotify**: to show the current track and control playback. Asked the first time Spotify is running.
+- **Automation → Spotify** and **Automation → Music**: to show the current track and control playback. Asked the first time each app is running.
 
 If you said no by accident, the menu bar menu has a shortcut to the right System Settings page.
 
@@ -131,8 +133,8 @@ Click the menu bar icon to:
 ## Privacy
 
 - **Calendar access is read-only.**
-- **Notch never launches Spotify** and only talks to it while it's already running.
-- **Album art is off by default.** When on, Notch downloads each cover from Spotify's image server (`i.scdn.co`) only, with no cookies. Nothing else goes online.
+- **Notch never launches Spotify or Apple Music** and only talks to them while they're already running.
+- **Album art is off by default.** When on, Notch downloads Spotify covers from Spotify's image server (`i.scdn.co`) only, with no cookies. Apple Music covers are read from the Music app itself, with no download. Nothing else goes online.
 - Song titles and artists are never written to logs.
 
 ## Development

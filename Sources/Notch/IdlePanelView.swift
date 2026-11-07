@@ -4,13 +4,13 @@ import SwiftUI
 struct IdlePanelView: View {
     let events: [MeetingEvent]
     let calendarAccess: Bool
-    @ObservedObject var spotify: SpotifyService
+    @ObservedObject var music: MusicService
     let onJoin: (URL) -> Void
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             VStack(alignment: .leading, spacing: 10) {
-                if let track = spotify.track {
+                if let track = music.track {
                     resumeRow(track)
                     Divider().overlay(.white.opacity(0.15))
                 }
@@ -28,7 +28,7 @@ struct IdlePanelView: View {
     private func resumeRow(_ track: TrackInfo) -> some View {
         HStack(spacing: 10) {
             Group {
-                if spotify.showAlbumArt, let art = spotify.artwork {
+                if music.showAlbumArt, let art = music.artwork {
                     Image(nsImage: art).resizable().aspectRatio(contentMode: .fill)
                 } else {
                     ZStack {
@@ -45,10 +45,10 @@ struct IdlePanelView: View {
                 Text(track.artist).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer(minLength: 8)
-            Button { spotify.playPause() } label: {
+            Button { music.playPause() } label: {
                 Image(systemName: "play.fill")
                     .font(.system(size: 14))
-                    .foregroundStyle(spotify.accent ?? .white)
+                    .foregroundStyle(music.accent ?? .white)
                     .frame(width: 30, height: 30)
                     .background(Circle().fill(.white.opacity(0.12)))
             }

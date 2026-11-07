@@ -15,6 +15,6 @@
     <key>NSCalendarsFullAccessUsageDescription</key>
     <string>Notch reads your calendar events (read-only) to show a reminder before meetings.</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Notch controls the Spotify desktop app (play/pause, next, previous) and reads the current track to show it in the notch.</string>
+    <string>Notch controls Spotify and Apple Music (play/pause, next, previous, seek) and reads the current track to show it in the notch.</string>
 </dict>
 </plist>
