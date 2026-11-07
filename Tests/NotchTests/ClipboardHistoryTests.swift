@@ -73,3 +73,34 @@ private let text = ["public.utf8-plain-text"]
     history.record("Report.pdf", types: ["public.file-url"] + text, at: at(0))
     #expect(history.items.isEmpty)
 }
+
+@Test func hugeCopiesAreSkipped() {
+    var history = ClipboardHistory()
+    history.record(String(repeating: "x", count: 1_000_001), types: text, at: at(0))
+    #expect(history.items.isEmpty)
+}
+
+@Test func copiesFromAnotherDeviceAreSkipped() {
+    // Universal Clipboard: the text still has to come over the network when read.
+    #expect(ClipboardHistory.shouldRead(types: text + ["com.apple.is-remote-clipboard"]) == false)
+}
+
+@Test func onlyPlainLocalTextIsRead() {
+    #expect(ClipboardHistory.shouldRead(types: text))
+    #expect(ClipboardHistory.shouldRead(types: text + ["org.nspasteboard.ConcealedType"]) == false)
+    #expect(ClipboardHistory.shouldRead(types: ["public.file-url"] + text) == false)
+}
+
+@Test func previewOfALongCopyIsShort() {
+    let item = ClipboardItem(text: String(repeating: "word ", count: 10_000), copiedAt: at(0))
+    #expect(item.preview.count <= 300)
+}
+
+@Test func theSameTextCopiedTwiceKeepsOneItem() {
+    var history = ClipboardHistory()
+    history.record("a", types: text, at: at(0))
+    let firstID = history.items[0].id
+    history.record("a", types: text, at: at(5))
+    #expect(history.items.count == 1)
+    #expect(history.items[0].id != firstID)   // a fresh row, so the list animates it to the top
+}

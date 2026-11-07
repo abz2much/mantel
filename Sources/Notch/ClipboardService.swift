@@ -65,8 +65,12 @@ final class ClipboardService: ObservableObject {
         let count = pasteboard.changeCount
         guard count != lastChangeCount else { return }
         lastChangeCount = count
-        guard let text = pasteboard.string(forType: .string) else { return }   // not text: images, files
+        // Types first: private, temporary, file and other-device copies are never read at all.
         let types = pasteboard.types?.map(\.rawValue) ?? []
+        guard ClipboardHistory.shouldRead(types: types),
+              let text = pasteboard.string(forType: .string),   // nil when it isn't text: images
+              pasteboard.changeCount == count                   // something newer arrived mid-read
+        else { return }
         history.record(text, types: types, at: Date())
         if items != history.items { items = history.items }
     }

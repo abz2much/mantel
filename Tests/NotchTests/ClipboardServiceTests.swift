@@ -38,3 +38,44 @@ private func makeService() -> (ClipboardService, NSPasteboard) {
     #expect(service.items.map(\.text) == ["first", "second"])
     board.releaseGlobally()
 }
+
+@MainActor @Test func aTemporaryCopyIsNotRecorded() {
+    let (service, board) = makeService()
+    board.clearContents()
+    board.declareTypes([.string, NSPasteboard.PasteboardType("org.nspasteboard.TransientType")], owner: nil)
+    board.setString("123456", forType: .string)
+    service.check()
+    #expect(service.items.isEmpty)
+    board.releaseGlobally()
+}
+
+@MainActor @Test func whatWasCopiedBeforeStartIsNotRecorded() {
+    let board = NSPasteboard(name: NSPasteboard.Name("notch-test-\(UUID().uuidString)"))
+    board.clearContents(); board.setString("earlier", forType: .string)
+    let service = ClipboardService(pasteboard: board)
+    service.check()
+    #expect(service.items.isEmpty)
+    board.releaseGlobally()
+}
+
+@MainActor @Test func turningOffClearsAndTurningOnIgnoresCopiesMadeWhileOff() {
+    let (service, board) = makeService()
+    let wasEnabled = service.enabled
+    defer { service.enabled = wasEnabled }   // the switch is saved; put it back
+    board.clearContents(); board.setString("kept", forType: .string); service.check()
+    service.enabled = false
+    #expect(service.items.isEmpty)
+    board.clearContents(); board.setString("while off", forType: .string)
+    service.enabled = true
+    service.check()
+    #expect(service.items.isEmpty)
+    board.releaseGlobally()
+}
+
+@MainActor @Test func clearEmptiesTheList() {
+    let (service, board) = makeService()
+    board.clearContents(); board.setString("a", forType: .string); service.check()
+    service.clear()
+    #expect(service.items.isEmpty)
+    board.releaseGlobally()
+}

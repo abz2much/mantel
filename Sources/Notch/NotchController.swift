@@ -12,9 +12,11 @@ final class NotchState: ObservableObject {
 
     @Published var event: MeetingEvent?
     @Published var content: Content = .music
-    /// The hover panel's open tab, and the one last picked (reopened next time).
-    @Published var tab: HoverTab = .music
-    var lastTab: HoverTab?
+    /// The hover panel's open tab; whichever was shown last opens next time.
+    @Published var tab: HoverTab = .music {
+        didSet { lastTab = tab }
+    }
+    private(set) var lastTab: HoverTab?
     /// The battery flash showing in the compact notch, if any, and when it started.
     @Published var battery: BatteryAlert?
     @Published var batteryShownAt: Date?
@@ -217,6 +219,13 @@ final class NotchController {
         }
     }
 
+    /// The notch's window can take the keyboard; by default a click there keeps it, so ⌘V straight after
+    /// clicking a clipboard row would land in Notch. This keeps it only when something needs typing.
+    /// The window is rebuilt each time the notch shows, so it's set after every show.
+    private func keepKeyboardInFrontApp() {
+        (notch?.windowController?.window as? NSPanel)?.becomesKeyOnlyIfNeeded = true
+    }
+
     private func perform(_ mode: Mode) async {
         // The music tab's progress bar needs the position; the panel opens from both music and idle.
         music.setPolling(mode == .musicExpanded || mode == .idleExpanded)
@@ -238,6 +247,7 @@ final class NotchController {
             state.content = .meeting
             await notch?.expand(on: screen)
         }
+        keepKeyboardInFrontApp()
     }
 
     /// Prefer the built-in display (the one with a notch); otherwise the main screen.

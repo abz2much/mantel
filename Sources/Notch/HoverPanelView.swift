@@ -45,7 +45,6 @@ struct HoverPanelView: View {
         let selected = state.tab == tab
         return Button {
             state.tab = tab
-            state.lastTab = tab
         } label: {
             Label(title, systemImage: icon)
                 .font(.system(size: 11, weight: .medium))
@@ -59,7 +58,12 @@ struct HoverPanelView: View {
     }
 
     @ViewBuilder private var musicTab: some View {
-        if music.track != nil {
+        if !music.musicEnabled {
+            Label("Music card is off", systemImage: "music.note")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if music.track != nil {
             MusicCardView(music: music)
                 .padding(.horizontal, -12)   // the card brings its own padding
         } else {
@@ -78,8 +82,8 @@ struct ClipboardListView: View {
     let onCopy: (ClipboardItem) -> Void
     /// Off only for screenshots: SwiftUI's image renderer can't draw scroll views.
     var scrolls = true
-    @State private var copiedID: String?
-    @State private var hoveredID: String?
+    @State private var copiedText: String?
+    @State private var hoveredID: UUID?
 
     var body: some View {
         if !enabled {
@@ -92,7 +96,7 @@ struct ClipboardListView: View {
                     ForEach(items) { row($0, now: context.date) }
                 }
                 if scrolls {
-                    ScrollView { rows }.scrollIndicators(.never)
+                    ScrollView { rows }.scrollIndicators(.automatic)   // about 7 rows show; more scroll
                 } else {
                     rows
                 }
@@ -101,12 +105,16 @@ struct ClipboardListView: View {
     }
 
     private func row(_ item: ClipboardItem, now: Date) -> some View {
-        let copied = copiedID == item.id
+        // Matched by text: copying moves the item to the top as a new row.
+        let copied = copiedText == item.text
         return Button {
-            onCopy(item)
-            withAnimation(.snappy) { copiedID = item.id }
+            hoveredID = nil   // the pointer is now over a different row
+            withAnimation(.snappy) {
+                onCopy(item)
+                copiedText = item.text
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                if copiedID == item.id { withAnimation(.snappy) { copiedID = nil } }
+                if copiedText == item.text { withAnimation(.snappy) { copiedText = nil } }
             }
         } label: {
             HStack(spacing: 8) {

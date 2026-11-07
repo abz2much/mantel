@@ -54,6 +54,7 @@ A small macOS menu bar app that puts your next meeting and what's playing on Spo
   - Text only. Copying the same thing again moves it to the top.
   - Kept **in memory only**: nothing is saved, and the list is gone when Notch quits.
   - Skips anything password managers mark as private, one-time codes and other temporary copies, and copied files.
+  - Also skips copies from your iPhone (Universal Clipboard) and very large copies (over a million characters).
   - Turn it off, or clear it, from the menu bar.
 - **Today**: the meeting in progress (**Now**), the **Next** one with a countdown like "in 1h 20m", and up to three more, each with its calendar's colour and a **Join** button where there's a link. "No more meetings today" when your day is done.
 
