@@ -5,8 +5,8 @@ import os
 
 @MainActor
 final class NotchState: ObservableObject {
-    /// What the expanded notch shows: a meeting reminder, the music card on its own (a peek on
-    /// screens without a notch), or the hover panel with its tabs.
+    /// What the expanded notch shows: a meeting reminder, the hover panel with its tabs, or "Time's up".
+    /// (`.music`, the music card on its own, is no longer used now the peek is gone.)
     enum Content { case meeting, music, panel, timerDone }
 
     @Published var event: MeetingEvent?
@@ -26,7 +26,6 @@ final class NotchState: ObservableObject {
 final class NotchController {
     private static let hoverDwell: TimeInterval = 0.3
     private static let hoverLeaveDelay: TimeInterval = 0.5
-    private static let peekDuration: TimeInterval = 6
     private static let batteryFlashDuration: TimeInterval = 3
 
     private static let log = Logger(subsystem: "local.notch.app", category: "notch")
@@ -52,7 +51,6 @@ final class NotchController {
     private var hoverCancellable: AnyCancellable?
     private var glowCancellable: AnyCancellable?
     private var pointer: PointerWatcher?
-    private var peekUntil: Date?
     private var timer: Timer?
     private var batteryTimer: Timer?
 
@@ -73,12 +71,6 @@ final class NotchController {
         battery.onAlert = { [weak self] alert in self?.flashBattery(alert) }
         calendar.onUpdate = { [weak self] in self?.evaluate() }
         music.onChange = { [weak self] in self?.evaluate() }
-        music.onPlay = { [weak self] in
-            // No compact state on screens without a notch, so peek briefly instead.
-            guard let self, !Self.targetScreen().hasNotchInset else { return }
-            peekUntil = Date().addingTimeInterval(Self.peekDuration)
-            evaluate()
-        }
     }
 
     func start() {
@@ -217,7 +209,6 @@ final class NotchController {
             musicShowsCard: music.showsCard,
             screenHasNotch: Self.targetScreen().hasNotchInset,
             hoverExpanded: hoverExpanded,
-            peeking: (peekUntil ?? .distantPast) > now,
             timerDoneShowing: timerService.doneShowing,
             batteryFlashing: state.battery != nil
         )
@@ -254,13 +245,12 @@ final class NotchController {
         let screen = Self.targetScreen()
         switch mode {
         case .hidden: await notch?.hide()
-        case .musicCompact, .idle: await notch?.compact(on: screen)
+        case .musicCompact, .idle, .tab: await notch?.compact(on: screen)
         case .battery:
             await notch?.compact(on: screen)
             if desired == .battery { startFlashClock() }
         case .musicExpanded:
-            // Hovering a notch opens the panel; without a notch this is the brief peek at a new song.
-            state.content = screen.hasNotchInset ? .panel : .music
+            state.content = .panel
             await notch?.expand(on: screen)
         case .idleExpanded:
             state.content = .panel
