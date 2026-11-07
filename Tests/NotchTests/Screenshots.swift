@@ -11,16 +11,16 @@ struct Screenshots {
     private let dir = URL(fileURLWithPath: ProcessInfo.processInfo.environment["NOTCH_SCREENSHOTS_DIR"] ?? ".")
 
     @Test func musicCard() throws {
-        let spotify = playingSpotify()
-        try save(notchShape(MusicCardView(spotify: spotify)), as: "music-card.png")
+        let music = playingMusic()
+        try save(notchShape(MusicCardView(music: music)), as: "music-card.png")
     }
 
     @Test func compact() throws {
-        let spotify = playingSpotify()
+        let music = playingMusic()
         let view = HStack(spacing: 0) {
-            MusicCompactLeading(spotify: spotify).frame(width: 40)
+            MusicCompactLeading(music: music).frame(width: 40)
             Color.black.frame(width: 190)   // the notch itself
-            MusicCompactTrailing(spotify: spotify).frame(width: 40)
+            MusicCompactTrailing(music: music).frame(width: 40)
         }
         .frame(height: 32)
         .background(UnevenRoundedRectangle(bottomLeadingRadius: 12, bottomTrailingRadius: 12).fill(.black))
@@ -56,16 +56,16 @@ struct Screenshots {
             meeting("Lunch with Sam", in: 150, lasts: 60, colour: personal),
             meeting("1:1", in: 240, colour: work),
         ]
-        let view = IdlePanelView(events: events, calendarAccess: true, spotify: playingSpotify(), onJoin: { _ in })
+        let view = IdlePanelView(events: events, calendarAccess: true, music: playingMusic(), onJoin: { _ in })
         try save(notchShape(view), as: "idle-panel.png")
     }
 
-    private func playingSpotify() -> SpotifyService {
-        let spotify = SpotifyService()
-        spotify.showAlbumArt = true
-        spotify.refresh()
-        spotify.seek(to: 84)
-        return spotify
+    private func playingMusic() -> MusicService {
+        let music = MusicService()
+        music.showAlbumArt = true
+        music.refresh()
+        music.seek(to: 84)
+        return music
     }
 
     /// Black notch-like backing (square top, rounded bottom), masked like the real notch.

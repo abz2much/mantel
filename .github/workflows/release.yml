@@ -73,14 +73,14 @@ jobs:
           2. Drag **Notch.app** to your Applications folder, then open it.
           3. macOS blocks it the first time, because the app isn't from the App Store or a paid Apple developer account.
              Within the hour, go to **System Settings → Privacy & Security**, scroll down, click **Open Anyway** and confirm.
-          4. Allow access to **Calendars**, and to control **Spotify** if asked.
+          4. Allow access to **Calendars**, and to control **Spotify** or **Music** if asked.
 
           If macOS says the app **is damaged and can't be opened**, run this in Terminal, then open it again:
 
               xattr -dr com.apple.quarantine /Applications/Notch.app
 
           Updating: quit Notch, replace the app in Applications and do step 3 again.
-          macOS may ask for the Calendars and Spotify permissions again.
+          macOS may ask for the Calendars, Spotify and Music permissions again.
 
           Needs macOS 14 Sonoma or later.
 

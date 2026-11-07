@@ -4,13 +4,13 @@ import SwiftUI
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let calendar = CalendarService()
-    let spotify = SpotifyService()
+    let music = MusicService()
     let battery = BatteryService()
-    private(set) lazy var controller = NotchController(calendar: calendar, spotify: spotify, battery: battery)
+    private(set) lazy var controller = NotchController(calendar: calendar, music: music, battery: battery)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         controller.start()
-        spotify.start()
+        music.start()
         battery.start()
         Task { await calendar.start() }
     }
@@ -22,7 +22,7 @@ struct NotchApp: App {
 
     var body: some Scene {
         MenuBarExtra("Notch", systemImage: "calendar.badge.clock") {
-            MenuContent(calendar: delegate.calendar, spotify: delegate.spotify, battery: delegate.battery)
+            MenuContent(calendar: delegate.calendar, music: delegate.music, battery: delegate.battery)
         }
         .menuBarExtraStyle(.menu)
     }
@@ -30,7 +30,7 @@ struct NotchApp: App {
 
 struct MenuContent: View {
     @ObservedObject var calendar: CalendarService
-    @ObservedObject var spotify: SpotifyService
+    @ObservedObject var music: MusicService
     @ObservedObject var battery: BatteryService
 
     var body: some View {
@@ -49,11 +49,11 @@ struct MenuContent: View {
             }
         }
         Divider()
-        Toggle("Show music card", isOn: $spotify.musicEnabled)
-        Toggle("Show album art", isOn: $spotify.showAlbumArt)
-            .disabled(!spotify.musicEnabled)
-        if spotify.musicEnabled && spotify.permissionDenied {
-            Text("Spotify control blocked: Automation permission denied")
+        Toggle("Show music card", isOn: $music.musicEnabled)
+        Toggle("Show album art", isOn: $music.showAlbumArt)
+            .disabled(!music.musicEnabled)
+        if music.musicEnabled && !music.blockedApps.isEmpty {
+            Text("\(music.blockedApps.joined(separator: " and ")) control blocked: Automation permission denied")
             Button("Open Automation Settings…") {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation")!)
             }

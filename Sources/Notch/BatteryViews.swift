@@ -76,14 +76,14 @@ struct BatteryCompactSide: View {
 /// Left of the notch: the battery flash while one is showing, otherwise the music indicator.
 struct CompactLeading: View {
     @ObservedObject var state: NotchState
-    @ObservedObject var spotify: SpotifyService
+    @ObservedObject var music: MusicService
 
     var body: some View {
         if let alert = state.battery {
             // Until the clock starts, the sweep waits (dark) rather than playing unseen.
             BatteryCompactSide(alert: alert, shownAt: state.batteryShownAt ?? .distantFuture, side: .leading)
         } else {
-            MusicCompactLeading(spotify: spotify)
+            MusicCompactLeading(music: music)
         }
     }
 }
@@ -91,14 +91,14 @@ struct CompactLeading: View {
 /// Right of the notch: the battery level while a flash is showing, otherwise the music indicator.
 struct CompactTrailing: View {
     @ObservedObject var state: NotchState
-    @ObservedObject var spotify: SpotifyService
+    @ObservedObject var music: MusicService
 
     var body: some View {
         if let alert = state.battery {
             // Until the clock starts, the sweep waits (dark) rather than playing unseen.
             BatteryCompactSide(alert: alert, shownAt: state.batteryShownAt ?? .distantFuture, side: .trailing)
         } else {
-            MusicCompactTrailing(spotify: spotify)
+            MusicCompactTrailing(music: music)
         }
     }
 }

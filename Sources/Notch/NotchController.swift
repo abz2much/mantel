@@ -29,7 +29,7 @@ final class NotchController {
     private enum Mode: Equatable { case hidden, musicCompact, musicExpanded, idle, idleExpanded, meeting, battery }
 
     private let calendar: CalendarService
-    private let spotify: SpotifyService
+    private let music: MusicService
     private let battery: BatteryService
     private let state = NotchState()
     private var notch: DynamicNotch<NotchRootView, CompactLeading, CompactTrailing>?
@@ -48,14 +48,14 @@ final class NotchController {
     private var timer: Timer?
     private var batteryTimer: Timer?
 
-    init(calendar: CalendarService, spotify: SpotifyService, battery: BatteryService) {
+    init(calendar: CalendarService, music: MusicService, battery: BatteryService) {
         self.calendar = calendar
-        self.spotify = spotify
+        self.music = music
         self.battery = battery
         battery.onAlert = { [weak self] alert in self?.flashBattery(alert) }
         calendar.onUpdate = { [weak self] in self?.evaluate() }
-        spotify.onChange = { [weak self] in self?.evaluate() }
-        spotify.onPlay = { [weak self] in
+        music.onChange = { [weak self] in self?.evaluate() }
+        music.onPlay = { [weak self] in
             // No compact state on screens without a notch, so peek briefly instead.
             guard let self, !Self.targetScreen().hasNotchInset else { return }
             peekUntil = Date().addingTimeInterval(Self.peekDuration)
@@ -70,7 +70,7 @@ final class NotchController {
             expanded: { [unowned self] in
                 NotchRootView(
                     state: state,
-                    spotify: spotify,
+                    music: music,
                     calendar: calendar,
                     onJoin: { [weak self] url in
                         NSWorkspace.shared.open(url)
@@ -79,8 +79,8 @@ final class NotchController {
                     onDismiss: { [weak self] in self?.dismissCurrent() }
                 )
             },
-            compactLeading: { [unowned self] in CompactLeading(state: state, spotify: spotify) },
-            compactTrailing: { [unowned self] in CompactTrailing(state: state, spotify: spotify) }
+            compactLeading: { [unowned self] in CompactLeading(state: state, music: music) },
+            compactTrailing: { [unowned self] in CompactTrailing(state: state, music: music) }
         )
         self.notch = notch
 
@@ -176,7 +176,7 @@ final class NotchController {
             desired = .meeting
         } else {
             currentReminder = nil
-            if spotify.showsCard {
+            if music.showsCard {
                 if Self.targetScreen().hasNotchInset {
                     desired = hoverExpanded ? .musicExpanded : .musicCompact
                 } else {
@@ -210,7 +210,7 @@ final class NotchController {
     }
 
     private func perform(_ mode: Mode) async {
-        spotify.setPolling(mode == .musicExpanded)
+        music.setPolling(mode == .musicExpanded)
         let screen = Self.targetScreen()
         switch mode {
         case .hidden: await notch?.hide()
