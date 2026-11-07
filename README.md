@@ -15,6 +15,9 @@ A small macOS menu bar app that puts your next meeting and what's playing on Spo
   <img src="docs/images/idle-panel.png" width="480" alt="Hover panel on the Today tab: today's meetings with Join buttons">
 </p>
 <p align="center">
+  <img src="docs/images/timer-running.png" width="480" alt="Hover panel on the Timer tab: a 25-minute countdown with Pause, +1 min and Stop">
+</p>
+<p align="center">
   <img src="docs/images/compact.png" width="320" alt="Compact view: a tiny album cover and waveform either side of the notch">
 </p>
 
@@ -45,9 +48,9 @@ A small macOS menu bar app that puts your next meeting and what's playing on Spo
 - Hides itself after 2 minutes paused, and when the app quits.
 - **Both apps open?** The card shows the one that's playing. If both are playing, the one that started last; if both are paused, the one you used last.
 
-### Hover panel: Music, Clipboard, Today
+### Hover panel: Music, Clipboard, Today, Timer
 
-**Hover the notch** to open a panel with three tabs. It opens on the tab you used last, and stays the same size on every tab.
+**Hover the notch** to open a panel with four tabs. It opens on the tab you used last, and stays the same size on every tab.
 
 - **Music**: the full music card, playing or paused, or "Nothing playing".
 - **Clipboard**: your last 10 text copies, newest first. **Click one** to put it back on the clipboard, then press ⌘V where you want it.
@@ -57,6 +60,11 @@ A small macOS menu bar app that puts your next meeting and what's playing on Spo
   - Also skips copies from your iPhone (Universal Clipboard) and very large copies (over a million characters).
   - Turn it off, or clear it, from the menu bar.
 - **Today**: the meeting in progress (**Now**), the **Next** one with a countdown like "in 1h 20m", and up to three more, each with its calendar's colour and a **Join** button where there's a link. "No more meetings today" when your day is done.
+
+- **Timer**: start a **5, 15, 25 or 45-minute** timer. While it runs, the time left shows beside the notch, and the tab has **Pause**, **+1 min** and **Stop**.
+  - When it ends, the notch drops down with **Time's up** and a chime for 10 seconds.
+  - The 25-minute one is a **focus session**: when it ends, there's a button to start a **5-minute break**.
+  - Meeting reminders and the charging flash still come first.
 
 To make this hoverable, the notch stays as a slightly wider black shape while idle.
 

@@ -7,6 +7,7 @@ struct HoverPanelView: View {
     @ObservedObject var music: MusicService
     @ObservedObject var calendar: CalendarService
     @ObservedObject var clipboard: ClipboardService
+    @ObservedObject var timer: TimerService
     let onJoin: (URL) -> Void
 
     /// Fits the music card, five meetings, or about seven copies (the list scrolls for more).
@@ -21,6 +22,7 @@ struct HoverPanelView: View {
                 case .music: musicTab
                 case .clipboard: ClipboardListView(items: clipboard.items, enabled: clipboard.enabled, onCopy: clipboard.copy)
                 case .today: TodayView(events: calendar.events, calendarAccess: calendar.hasAccess, onJoin: onJoin)
+                case .timer: TimerTabView(timer: timer)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -37,6 +39,7 @@ struct HoverPanelView: View {
             tabButton(.music, "Music", "music.note")
             tabButton(.clipboard, "Clipboard", "doc.on.clipboard")
             tabButton(.today, "Today", "calendar")
+            tabButton(.timer, "Timer", "timer")
             Spacer()
         }
     }

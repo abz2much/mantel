@@ -83,8 +83,23 @@ struct Screenshots {
         let state = NotchState()
         state.tab = .music
         let view = HoverPanelView(state: state, music: playingMusic(), calendar: CalendarService(),
-                                  clipboard: ClipboardService(), onJoin: { _ in })
+                                  clipboard: ClipboardService(), timer: TimerService(), onJoin: { _ in })
         try save(notchShape(view), as: "music-tab.png")
+    }
+
+    @Test func timerTab() throws {
+        let state = NotchState()
+        state.tab = .timer
+        let timer = TimerService()
+        func panel() -> some View {
+            HoverPanelView(state: state, music: MusicService(), calendar: CalendarService(),
+                           clipboard: ClipboardService(), timer: timer, onJoin: { _ in })
+        }
+        try save(notchShape(panel()), as: "timer-start.png")
+        timer.start(minutes: 25)
+        try save(notchShape(panel()), as: "timer-running.png")
+        timer.stop()
+        try save(notchShape(TimerDoneView(timer: timer)), as: "timer-done.png")
     }
 
     /// The hover panel on one tab, with calendar data that doesn't come from the real calendar.
@@ -102,7 +117,7 @@ struct Screenshots {
     /// A stand-in for the panel's tab bar (the real one needs live services).
     private func tabs(selected: String) -> some View {
         HStack(spacing: 4) {
-            ForEach([("Music", "music.note"), ("Clipboard", "doc.on.clipboard"), ("Today", "calendar")], id: \.0) { title, icon in
+            ForEach([("Music", "music.note"), ("Clipboard", "doc.on.clipboard"), ("Today", "calendar"), ("Timer", "timer")], id: \.0) { title, icon in
                 Label(title, systemImage: icon)
                     .font(.system(size: 11, weight: .medium))
                     .padding(.horizontal, 10).padding(.vertical, 4)
