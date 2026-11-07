@@ -9,6 +9,7 @@ struct SettingsView: View {
     @ObservedObject var clipboard: ClipboardService
     @ObservedObject var updates: UpdateService
     @ObservedObject var loginItem: LoginItemService
+    @ObservedObject var monitors: MonitorSettings
 
     var body: some View {
         TabView {
@@ -66,6 +67,12 @@ struct SettingsView: View {
             Section("Battery") {
                 Toggle("Charging animation", isOn: $battery.chargingAlertEnabled)
                 Toggle("Low battery alert", isOn: $battery.lowAlertEnabled)
+            }
+            Section("Monitors") {
+                Toggle("Use Mantel on screens without a notch", isOn: $monitors.enabled)
+                Toggle("Show a small tab while music or a timer runs", isOn: $monitors.tabEnabled)
+                    .padding(.leading, 16)
+                    .disabled(!monitors.enabled)
             }
             Section("Clipboard") {
                 Toggle("Clipboard history", isOn: $clipboard.enabled)

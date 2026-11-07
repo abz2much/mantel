@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import Notch
 
@@ -44,4 +45,33 @@ import Testing
 @Test func theUpdateLineSaysWhenANewVersionIsAvailable() {
     #expect(UpdateStatusText.line(version: AppVersion(1, 5, 0), status: .available("1.6.0")) == "Mantel 1.6.0 is available")
     #expect(UpdateStatusText.line(version: AppVersion(1, 5, 0), status: .upToDate) == "Mantel 1.5.0: up to date")
+}
+
+private func freshDefaults() -> UserDefaults { UserDefaults(suiteName: "test.\(UUID())")! }
+
+@MainActor
+@Test func monitorSettingsDefaultOn() {
+    let m = MonitorSettings(defaults: freshDefaults())
+    #expect(m.enabled)
+    #expect(m.tabEnabled)
+    #expect(m.showsTab)
+}
+
+@MainActor
+@Test func monitorSettingsPersist() {
+    let d = freshDefaults()
+    let m = MonitorSettings(defaults: d)
+    m.enabled = false
+    m.tabEnabled = false
+    let again = MonitorSettings(defaults: d)
+    #expect(!again.enabled)
+    #expect(!again.tabEnabled)
+}
+
+@MainActor
+@Test func tabHiddenWhenMonitorsOff() {
+    let m = MonitorSettings(defaults: freshDefaults())
+    m.enabled = false
+    #expect(m.tabEnabled)
+    #expect(!m.showsTab)
 }

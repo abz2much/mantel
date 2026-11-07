@@ -36,6 +36,7 @@ final class NotchController {
     private let battery: BatteryService
     private let clipboard: ClipboardService
     private let timerService: TimerService
+    private let monitors: MonitorSettings
     private let state = NotchState()
     private var notch: NotchPresenter<NotchRootView, CompactLeading, CompactTrailing>?
 
@@ -55,12 +56,14 @@ final class NotchController {
     private var timer: Timer?
     private var batteryTimer: Timer?
 
-    init(calendar: CalendarService, music: MusicService, battery: BatteryService, clipboard: ClipboardService, timer: TimerService) {
+    init(calendar: CalendarService, music: MusicService, battery: BatteryService, clipboard: ClipboardService, timer: TimerService,
+         monitors: MonitorSettings) {
         self.calendar = calendar
         self.music = music
         self.battery = battery
         self.clipboard = clipboard
         self.timerService = timer
+        self.monitors = monitors
         timer.onChange = { [weak self] in
             guard let self else { return }
             evaluate()

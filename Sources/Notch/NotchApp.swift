@@ -10,8 +10,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let updates = UpdateService()
     let timer = TimerService()
     let loginItem = LoginItemService()
+    let monitors = MonitorSettings()
     private(set) lazy var controller = NotchController(calendar: calendar, music: music, battery: battery,
-                                                       clipboard: clipboard, timer: timer)
+                                                       clipboard: clipboard, timer: timer, monitors: monitors)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         controller.start()
@@ -38,7 +39,8 @@ struct NotchApp: App {
 
         Settings {
             SettingsView(calendar: delegate.calendar, music: delegate.music, battery: delegate.battery,
-                         clipboard: delegate.clipboard, updates: delegate.updates, loginItem: delegate.loginItem)
+                         clipboard: delegate.clipboard, updates: delegate.updates, loginItem: delegate.loginItem,
+                         monitors: delegate.monitors)
         }
     }
 }
