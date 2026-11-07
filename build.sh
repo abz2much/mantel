@@ -1,16 +1,28 @@
 #!/bin/zsh
-# Builds Notch and assembles build/Notch.app, ad-hoc signed. Local use only.
+# Builds Notch and assembles build/Notch.app, ad-hoc signed.
+# Optional, used by the release workflow:
+#   NOTCH_UNIVERSAL=1      build for both Apple Silicon and Intel
+#   NOTCH_VERSION=1.2.3    version shown in Finder and About
+#   NOTCH_BUILD=42         build number
 set -euo pipefail
 cd "$(dirname "$0")"
 
-swift build -c release
-BIN="$(swift build -c release --show-bin-path)/Notch"
+ARCHS=()
+if [[ "${NOTCH_UNIVERSAL:-}" == 1 ]]; then ARCHS=(--arch arm64 --arch x86_64); fi
+swift build -c release "${ARCHS[@]}"
+BIN="$(swift build -c release "${ARCHS[@]}" --show-bin-path)/Notch"
 
 APP=build/Notch.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 cp "$BIN" "$APP/Contents/MacOS/Notch"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+if [[ -n "${NOTCH_VERSION:-}" ]]; then
+  plutil -replace CFBundleShortVersionString -string "$NOTCH_VERSION" "$APP/Contents/Info.plist"
+fi
+if [[ -n "${NOTCH_BUILD:-}" ]]; then
+  plutil -replace CFBundleVersion -string "$NOTCH_BUILD" "$APP/Contents/Info.plist"
+fi
 
 codesign --force --sign - "$APP"
 codesign --verify --verbose "$APP"

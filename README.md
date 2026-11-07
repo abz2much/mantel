@@ -65,11 +65,21 @@ On a Mac or display without a notch there's no compact view, idle panel or batte
 
 - macOS 14 Sonoma or later. Made for MacBooks with a notch, but works on any Mac.
 - The **Spotify desktop app**, for the music card.
-- **Xcode 16 or later** (or its command line tools) to build it.
+- Only if you build it yourself: **Xcode 16 or later**. On recent macOS the command line tools alone aren't enough.
 
 ## Install
 
-Notch isn't on the App Store, so you build it from source. It takes about a minute.
+### Download
+
+1. Get **Notch-x.y.z.zip** from the [latest release](https://github.com/abz2much/notch/releases/latest) and open it.
+2. Drag **Notch.app** to your Applications folder, then open it.
+3. macOS blocks it the first time, because the app isn't from the App Store or a paid Apple developer account. Go to **System Settings → Privacy & Security**, scroll down, click **Open Anyway** and confirm.
+
+To update, quit Notch, replace the app in Applications and do step 3 again.
+
+### Build it yourself
+
+If you have Xcode, you can build it from source instead. It takes about a minute.
 
 ```sh
 git clone https://github.com/abz2much/notch.git
@@ -95,7 +105,7 @@ On first launch macOS asks for two permissions:
 
 If you said no by accident, the menu bar menu has a shortcut to the right System Settings page.
 
-Because the app is signed locally, macOS may ask for these permissions again after you rebuild.
+Because the app isn't signed with a paid Apple developer account, macOS may ask for these permissions again after you update or rebuild.
 
 ### Start at login
 
@@ -127,5 +137,10 @@ NOTCH_FAKE_SPOTIFY=1 build/Notch.app/Contents/MacOS/Notch   # fake playing track
 NOTCH_FAKE_BATTERY=1 build/Notch.app/Contents/MacOS/Notch   # fake plug-in, then a drop to 20%
 NOTCH_FAKE_SPOTIFY=1 NOTCH_SCREENSHOTS_DIR=docs/images swift test --filter Screenshots   # regenerate the README screenshots
 ```
+
+### Releasing
+
+On GitHub, open **Actions → Release → Run workflow**, pick `main` and type a version such as `1.2.0`. The workflow runs the tests, builds the app for Apple Silicon and Intel, tags the commit `v1.2.0` and publishes a release with the zip attached.
+
 
 Built on [DynamicNotchKit](https://github.com/MrKai77/DynamicNotchKit).

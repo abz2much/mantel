@@ -1,0 +1,84 @@
+name: Release
+
+# Press "Run workflow" on the Actions tab, type a version, and this builds Notch,
+# tags the commit and publishes a GitHub Release with Notch-<version>.zip attached.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, like 1.0.0"
+        required: true
+
+permissions:
+  contents: write   # to create the tag and the release
+
+# Never two releases at once.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15   # Xcode 16+: DynamicNotchKit needs Swift 6, the tests use Swift Testing
+    timeout-minutes: 30
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Check the version and branch
+        run: |
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must look like 1.2.3, got '$VERSION'"; exit 1
+          fi
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Releases are made from main. Pick main in the 'Use workflow from' list."; exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - name: Check the version isn't taken
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null; then
+            echo "::error::v$VERSION has already been released"; exit 1
+          fi
+
+      - name: Show toolchain
+        run: xcodebuild -version && swift --version
+
+      - name: Test
+        run: swift test
+
+      - name: Build the app (Apple Silicon and Intel)
+        env:
+          NOTCH_UNIVERSAL: "1"
+          NOTCH_VERSION: ${{ inputs.version }}
+          NOTCH_BUILD: ${{ github.run_number }}
+        run: ./build.sh
+
+      - name: Zip it
+        run: ditto -c -k --keepParent build/Notch.app "Notch-$VERSION.zip"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'EOF'
+          ## Install
+
+          1. Download **Notch-VERSION.zip** below and open it.
+          2. Drag **Notch.app** to your Applications folder, then open it.
+          3. macOS blocks it the first time, because the app isn't from the App Store or a paid Apple developer account.
+             Go to **System Settings → Privacy & Security**, scroll down, click **Open Anyway** and confirm.
+          4. Allow **Calendars**, and **Spotify** when asked.
+
+          Updating: quit Notch, replace the app in Applications and do step 3 again.
+          macOS may ask for the Calendars and Spotify permissions again.
+
+          Needs macOS 14 Sonoma or later.
+
+          EOF
+          sed -i '' "s/VERSION/$VERSION/" notes.md
+          gh release create "v$VERSION" "Notch-$VERSION.zip" \
+            --target "$GITHUB_SHA" \
+            --title "Notch $VERSION" \
+            --notes-file notes.md \
+            --generate-notes
