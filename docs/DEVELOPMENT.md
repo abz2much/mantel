@@ -2,7 +2,7 @@
 
 This is for anyone working on Mantel's code. The [README](../README.md) covers installing and using the app.
 
-Mantel used to be called Notch, so the repository, the Swift package and the program inside the app still use that name. The app's ID, `local.notch.app`, also stays as it is. Changing it would reset everyone's permissions and stop installed copies from accepting updates.
+Mantel used to be called Notch, so the Swift package and the program inside the app still use that name. The repository was renamed from `notch` to `mantel`; GitHub redirects the old name, so never create a new repository called `notch` on this account. The app's ID, `local.notch.app`, also stays as it is. Changing it would reset everyone's permissions and stop installed copies from accepting updates.
 
 ## Building and testing
 

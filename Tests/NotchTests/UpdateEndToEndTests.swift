@@ -27,7 +27,7 @@ struct UpdateEndToEnd {
     static func latestVersion(_ gh: String) -> AppVersion? {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: gh)
-        p.arguments = ["api", "repos/abz2much/notch/releases/latest", "--jq", ".tag_name"]
+        p.arguments = ["api", "repos/abz2much/mantel/releases/latest", "--jq", ".tag_name"]
         let out = Pipe(); p.standardOutput = out
         try? p.run(); p.waitUntilExit()
         let tag = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
