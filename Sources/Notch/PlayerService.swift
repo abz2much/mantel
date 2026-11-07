@@ -43,6 +43,8 @@ final class PlayerService: ObservableObject {
     let app: PlayerApp
     /// Test-only: simulates a playing Spotify track without any Apple events.
     private let fake: Bool
+    /// In fake mode the real Music app is left alone, so no Apple events are sent at all.
+    private let silenced: Bool
 
     /// Wraps `body` in a `tell` to the app inside a timeout, so a hung app fails fast instead of waiting.
     nonisolated private static func script(_ body: String, app: PlayerApp) -> String {
@@ -60,9 +62,11 @@ final class PlayerService: ObservableObject {
         case .spotify: "name of t, artist of t, player position, duration of t, artwork url of t"
         case .music: "name of t, artist of t, album of t, player position, duration of t"
         }
+        // Apple Music also scans (fast forward / rewind); that still counts as playing. Spotify has no such states.
+        let scanning = app.kind == .music ? " or player state is fast forwarding or player state is rewinding" : ""
         return script("""
             set s to "stopped"
-            if player state is playing then
+            if player state is playing\(scanning) then
                 set s to "playing"
             else if player state is paused then
                 set s to "paused"
@@ -94,13 +98,12 @@ final class PlayerService: ObservableObject {
         didSet { if showAlbumArt != oldValue { updateArtwork() } }
     }
 
-    /// When playback last started (or the song changed while playing), and when the track or state last changed.
-    private(set) var playingSince: Date?
-    private(set) var lastActive: Date?
+    /// When playback last started and when the app was last used, for choosing between apps.
+    private var activity = PlayerActivity()
 
     var snapshot: PlayerSnapshot {
         PlayerSnapshot(hasTrack: track != nil, isPlaying: track?.state == .playing,
-                       playingSince: playingSince, lastActive: lastActive)
+                       playingSince: activity.playingSince, lastActive: activity.lastActive)
     }
 
     /// Track, play state, availability or idle changed.
@@ -121,7 +124,9 @@ final class PlayerService: ObservableObject {
 
     init(app: PlayerApp) {
         self.app = app
-        fake = app.kind == .spotify && ProcessInfo.processInfo.environment["NOTCH_FAKE_SPOTIFY"] == "1"
+        let fakeMode = ProcessInfo.processInfo.environment["NOTCH_FAKE_SPOTIFY"] == "1"
+        fake = app.kind == .spotify && fakeMode
+        silenced = app.kind != .spotify && fakeMode
     }
 
     func start() {
@@ -140,6 +145,7 @@ final class PlayerService: ObservableObject {
             guard Self.isApp(note, bundleID) else { return }
             MainActor.assumeIsolated {
                 self?.setPolling(false)
+                self?.permissionDenied = false   // asked again next time it runs
                 self?.clear()
             }
         }
@@ -151,7 +157,9 @@ final class PlayerService: ObservableObject {
     }
 
     private var isRunning: Bool {
-        fake || !NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleID).isEmpty
+        if fake { return true }
+        if silenced { return false }
+        return !NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleID).isEmpty
     }
 
     // MARK: Commands
@@ -179,7 +187,7 @@ final class PlayerService: ObservableObject {
         let gen = generation
         let source = Self.script(verb, app: app)
         Task {
-            let result = await bridge.run(source, cache: cache) { _ in () }
+            let result = await bridge.run(source, cache: cache, onlyIfRunning: app.bundleID) { _ in () }
             guard gen == generation else { return }
             if case .failure(let error) = result { record(error) }
             refresh()
@@ -198,7 +206,7 @@ final class PlayerService: ObservableObject {
         let app = app
         Task {
             // The first call also triggers the system Automation consent prompt.
-            let result = await bridge.run(Self.stateScript(app)) { Self.parse($0, app: app) }
+            let result = await bridge.run(Self.stateScript(app), onlyIfRunning: app.bundleID) { Self.parse($0, app: app) }
             refreshing = false
             if gen == generation {
                 switch result {
@@ -268,12 +276,10 @@ final class PlayerService: ObservableObject {
         }
 
         guard new != old else { return }
-        let now = Date()
-        lastActive = new == nil ? nil : now
+        activity = activity.updated(from: old, to: new, now: Date())
         if old?.artworkKey != new?.artworkKey { updateArtwork() }
+        // Playback started or the song changed: on screens without a notch the card peeks.
         let started = new?.state == .playing && (old?.state != .playing || old?.title != new?.title || old?.artist != new?.artist)
-        if started { playingSince = now }
-        if new?.state != .playing { playingSince = nil }
         onChange?()
         if started { onPlay?() }
     }
@@ -316,7 +322,7 @@ final class PlayerService: ObservableObject {
         pollingPosition = true
         let gen = generation
         Task {
-            let result = await bridge.run(Self.script("return player position", app: app)) { $0.asDouble }
+            let result = await bridge.run(Self.script("return player position", app: app), onlyIfRunning: app.bundleID) { $0.asDouble }
             pollingPosition = false
             guard gen == generation else { return }
             switch result {
@@ -364,20 +370,45 @@ final class PlayerService: ObservableObject {
             let gen = generation
             let source = Self.script("""
                 tell current track
-                    if (count of artworks) is 0 then return missing value
+                    if (count of artworks) is 0 then return ""
                     return raw data of artwork 1
                 end tell
             """, app: app)
             artworkTask = Task {
-                let result = await bridge.run(source) { reply -> Data? in
-                    reply.descriptorType == typeNull ? nil : reply.data
+                // Covers can be large: shrink on the bridge's queue so the main thread never decodes the full image.
+                let result = await bridge.run(source, onlyIfRunning: app.bundleID) { reply -> SendableImage? in
+                    guard reply.descriptorType != typeUnicodeText else { return nil }   // "" means no cover
+                    return Self.thumbnail(reply.data, maxPixels: Self.coverPixels).map(SendableImage.init)
                 }
                 guard !Task.isCancelled, gen == generation else { return }
-                let image: NSImage? = if case .success(let data?) = result, data.count <= 5_000_000 { NSImage(data: data) } else { nil }
+                let image: NSImage? = if case .success(let cover?) = result {
+                    NSImage(cgImage: cover.image, size: NSSize(width: cover.image.width, height: cover.image.height))
+                } else { nil }
                 withAnimation(.easeInOut(duration: 0.4)) { artwork = image }
             }
         }
     }
+}
+
+extension PlayerService {
+    /// Largest side of a cover after shrinking; the card shows it at 72 pt (144 px on Retina).
+    nonisolated static let coverPixels = 300
+
+    /// Decodes image data straight to a small bitmap, without decoding the full-size image first.
+    nonisolated static func thumbnail(_ data: Data, maxPixels: Int) -> CGImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixels,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+        ]
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+    }
+}
+
+/// A finished, immutable bitmap handed from the bridge's queue to the main actor.
+struct SendableImage: @unchecked Sendable {
+    let image: CGImage
 }
 
 private extension NSAppleEventDescriptor {

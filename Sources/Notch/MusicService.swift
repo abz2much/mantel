@@ -61,7 +61,7 @@ final class MusicService: ObservableObject {
     private func choose() {
         let chosen = PlayerChooser.pick(players.map(\.snapshot)).map { players[$0] }
         guard chosen !== current else { return }
-        current = chosen
+        withAnimation(.snappy) { current = chosen }   // switching apps animates like a song change
         applyPolling()
     }
 

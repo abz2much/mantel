@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 import Testing
 @testable import Notch
 
@@ -36,4 +36,26 @@ private func reply(_ items: [Any]) -> NSAppleEventDescriptor {
 @Test func stoppedPlayerHasNoTrack() {
     #expect(PlayerService.parse(reply(["stopped"]), app: .spotify) == nil)
     #expect(PlayerService.parse(reply(["stopped"]), app: .music) == nil)
+}
+
+@Test func appleMusicRadioWithMissingDetailsStillShows() throws {
+    // Streams and radio can leave album and duration as "missing value".
+    let parsed = try #require(PlayerService.parse(
+        reply(["playing", "Live Show", "Station", NSNull(), 0.0, NSNull()]), app: .music))
+    #expect(parsed.0.title == "Live Show")
+    #expect(parsed.0.duration == 0)
+}
+
+@Test func largeCoverIsShrunk() throws {
+    let big = NSImage(size: NSSize(width: 3000, height: 3000), flipped: false) { rect in
+        NSColor.red.setFill(); rect.fill(); return true
+    }
+    let rep = try #require(big.tiffRepresentation.flatMap(NSBitmapImageRep.init(data:)))
+    let png = try #require(rep.representation(using: .png, properties: [:]))
+    let thumb = try #require(PlayerService.thumbnail(png, maxPixels: 300))
+    #expect(max(thumb.width, thumb.height) == 300)
+}
+
+@Test func coverThatIsNotAnImageGivesNothing() {
+    #expect(PlayerService.thumbnail(Data([0x6D, 0x73, 0x6E, 0x67]), maxPixels: 300) == nil)
 }
