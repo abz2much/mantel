@@ -43,3 +43,32 @@ private let laptop = CGRect(x: 0, y: 0, width: 1512, height: 982)
                                      windowFrame: CGRect(x: 378, y: 491, width: 756, height: 491))
     #expect(r == CGRect(x: 539, y: 762, width: 434, height: 220))
 }
+
+@Test func hoverZoneIsTopCentreStrip() {
+    #expect(NotchGeometry.hoverZone(screenFrame: CGRect(x: 1512, y: -200, width: 1920, height: 1080))
+            == CGRect(x: 2240, y: 877, width: 464, height: 3))
+}
+
+@Test func flipFromWindowListCoordinates() {
+    #expect(ActiveScreen.flip(cgBounds: CGRect(x: 100, y: 50, width: 800, height: 600), primaryHeight: 982)
+            == CGRect(x: 100, y: 332, width: 800, height: 600))
+}
+
+private let twoScreens: [(id: Int, frame: CGRect)] = [
+    (1, CGRect(x: 0, y: 0, width: 1512, height: 982)),
+    (2, CGRect(x: 1512, y: -200, width: 1920, height: 1080)),
+]
+
+@Test func activeScreenFromWindow() {
+    #expect(ActiveScreen.pick(windowBounds: CGRect(x: 1600, y: 100, width: 800, height: 600),
+                              mouse: .zero, screens: twoScreens) == 2)
+}
+
+@Test func straddlingWindowPicksLargerShare() {
+    #expect(ActiveScreen.pick(windowBounds: CGRect(x: 1300, y: 100, width: 600, height: 400),
+                              mouse: .zero, screens: twoScreens) == 2)
+}
+
+@Test func activeScreenFallsBackToMouse() {
+    #expect(ActiveScreen.pick(windowBounds: nil, mouse: CGPoint(x: 200, y: 300), screens: twoScreens) == 1)
+}
