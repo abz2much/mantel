@@ -5,11 +5,13 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let calendar = CalendarService()
     let spotify = SpotifyService()
-    private(set) lazy var controller = NotchController(calendar: calendar, spotify: spotify)
+    let battery = BatteryService()
+    private(set) lazy var controller = NotchController(calendar: calendar, spotify: spotify, battery: battery)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         controller.start()
         spotify.start()
+        battery.start()
         Task { await calendar.start() }
     }
 }
@@ -20,7 +22,7 @@ struct NotchApp: App {
 
     var body: some Scene {
         MenuBarExtra("Notch", systemImage: "calendar.badge.clock") {
-            MenuContent(calendar: delegate.calendar, spotify: delegate.spotify)
+            MenuContent(calendar: delegate.calendar, spotify: delegate.spotify, battery: delegate.battery)
         }
         .menuBarExtraStyle(.menu)
     }
@@ -29,6 +31,7 @@ struct NotchApp: App {
 struct MenuContent: View {
     @ObservedObject var calendar: CalendarService
     @ObservedObject var spotify: SpotifyService
+    @ObservedObject var battery: BatteryService
 
     var body: some View {
         if !calendar.hasAccess {
@@ -55,6 +58,9 @@ struct MenuContent: View {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation")!)
             }
         }
+        Divider()
+        Toggle("Charging animation", isOn: $battery.chargingAlertEnabled)
+        Toggle("Low battery alert", isOn: $battery.lowAlertEnabled)
         Divider()
         Button("Quit Notch") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
