@@ -29,7 +29,7 @@ When you plug in, a green glow sweeps across the notch with your battery level. 
 
 <sub>The screenshots are drawn from the app's own views using made-up data.</sub>
 
-On a screen without a notch, such as an external display, you still get meeting reminders and a short peek at each new song. The hover panel and the battery alerts need a notch.
+Mantel works on a monitor too. Move the pointer to the top centre of the screen and the same panel drops down. While music plays or a timer runs, a small black tab hangs there showing the song and the time left. Meeting reminders, battery alerts and the end of a timer appear on whichever screen the app you're using is on.
 
 ## Installing
 
@@ -50,7 +50,7 @@ Mantel keeps itself up to date. It checks for new versions in the background, in
 
 The menu bar icon gives you the update status, a way to check for updates, Settings and Quit. If something needs your attention, like calendar access being turned off, a warning with a button to fix it appears at the top.
 
-In Settings you can choose whether Mantel opens at login and installs updates automatically. You can also turn the music card, album art, battery alerts and clipboard history on or off, and pick which calendars to watch.
+In Settings you can choose whether Mantel opens at login and installs updates automatically. You can also turn the music card, album art, battery alerts and clipboard history on or off, and pick which calendars to watch. Under Monitors you can stop Mantel appearing on screens without a notch, or keep it there but hide the small tab. With the lid closed and Mantel turned off for monitors, meeting reminders still appear, so you don't miss one.
 
 ## Privacy
 
@@ -80,4 +80,3 @@ cd mantel
 
 That produces `build/Mantel.app`. Testing, debugging tricks and how releases work are covered in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-Mantel is built on [DynamicNotchKit](https://github.com/MrKai77/DynamicNotchKit).
