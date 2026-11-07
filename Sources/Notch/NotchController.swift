@@ -103,16 +103,32 @@ final class NotchController {
         // Compact areas only exist beside a real notch; elsewhere there's nowhere to flash.
         guard Self.targetScreen().hasNotchInset else { return }
         state.battery = alert
+        if applied == .battery {
+            startFlashClock()   // already compact: a new alert restarts the flash
+        } else {
+            state.batteryShownAt = nil   // the clock starts once the compact notch is showing
+            evaluate()
+        }
+    }
+
+    /// Starts the sweep and the 3 s countdown. Called once the compact areas are on screen,
+    /// so shrinking from an expanded card first doesn't eat the start of the sweep.
+    private func startFlashClock() {
         state.batteryShownAt = Date()
         batteryTimer?.invalidate()
-        batteryTimer = Timer.scheduledTimer(withTimeInterval: Self.batteryFlashDuration, repeats: false) { [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.state.battery = nil
-                self?.state.batteryShownAt = nil
-                self?.evaluate()
-            }
+        let timer = Timer(timeInterval: Self.batteryFlashDuration, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated { self?.endFlash() }
         }
+        RunLoop.main.add(timer, forMode: .common)   // keeps time while the menu bar menu is open
+        batteryTimer = timer
+    }
+
+    private func endFlash() {
+        state.battery = nil
+        state.batteryShownAt = nil
         evaluate()
+        // Hover was ignored during the flash; if the pointer is still on the notch, open it now.
+        if notch?.isHovering == true { hoverChanged(true) }
     }
 
     private func dismissCurrent() {
@@ -198,7 +214,10 @@ final class NotchController {
         let screen = Self.targetScreen()
         switch mode {
         case .hidden: await notch?.hide()
-        case .musicCompact, .idle, .battery: await notch?.compact(on: screen)
+        case .musicCompact, .idle: await notch?.compact(on: screen)
+        case .battery:
+            await notch?.compact(on: screen)
+            if desired == .battery { startFlashClock() }
         case .musicExpanded:
             state.content = .music
             await notch?.expand(on: screen)

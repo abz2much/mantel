@@ -19,6 +19,8 @@ final class BatteryService: ObservableObject {
 
     private var policy = BatteryAlertPolicy()
     private var source: CFRunLoopSource?
+    private var wasOnPower: Bool?
+    private var settleTimer: Timer?
 
     init() {
         let defaults = UserDefaults.standard
@@ -26,7 +28,9 @@ final class BatteryService: ObservableObject {
         lowAlertEnabled = defaults.object(forKey: Self.lowKey) as? Bool ?? true
     }
 
+    /// Starts watching. The service must live as long as the app: the callback holds it unretained.
     func start() {
+        guard source == nil else { return }
         if Self.fake { playFakeReadings(); return }
         let context = Unmanaged.passUnretained(self).toOpaque()
         // macOS calls this on the main run loop whenever a power source changes.
@@ -36,23 +40,36 @@ final class BatteryService: ObservableObject {
             MainActor.assumeIsolated { service.check() }
         }, context)?.takeRetainedValue() else { return }
         self.source = source
-        CFRunLoopAddSource(CFRunLoopGetMain(), source, .defaultMode)
+        // Common modes, so a plug-in while the menu bar menu is open still flashes straight away.
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         check()
     }
 
     private func check() {
-        guard let reading = Self.read() else { return }
+        guard !Self.fake, let reading = Self.read() else { return }
         handle(reading)
     }
 
     private func handle(_ reading: BatteryReading) {
+        // After an unplug the policy waits for the cable to settle; look again once it has,
+        // as macOS may not report anything new for minutes.
+        if wasOnPower == true, !reading.onPower {
+            settleTimer?.invalidate()
+            let timer = Timer(timeInterval: BatteryAlertPolicy.replugQuietPeriod + 0.5, repeats: false) { [weak self] _ in
+                MainActor.assumeIsolated { self?.check() }
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            settleTimer = timer
+        }
+        wasOnPower = reading.onPower
+
         guard let alert = policy.update(reading, now: Date()),
               alert.isAllowed(charging: chargingAlertEnabled, low: lowAlertEnabled)
         else { return }
         onAlert?(alert)
     }
 
-    /// NOTCH_FAKE_BATTERY=1: a plug-in after 2 s, then a drop to 20% on battery after 8 s. For trying the flashes.
+    /// NOTCH_FAKE_BATTERY=1: a plug-in after 2 s, an unplug at 21% after 7 s, then a drop to 20% after 13 s. For trying the flashes.
     private static let fake = ProcessInfo.processInfo.environment["NOTCH_FAKE_BATTERY"] == "1"
 
     private func playFakeReadings() {
@@ -60,9 +77,10 @@ final class BatteryService: ObservableObject {
             (0, BatteryReading(percent: 72, onPower: false)),
             (2, BatteryReading(percent: 72, onPower: true)),
             (7, BatteryReading(percent: 21, onPower: false)),
-            (8, BatteryReading(percent: 20, onPower: false)),
+            (13, BatteryReading(percent: 20, onPower: false)),
         ]
-        for (delay, reading) in script {
+        handle(script[0].1)
+        for (delay, reading) in script.dropFirst() {
             Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
                 MainActor.assumeIsolated { self?.handle(reading) }
             }

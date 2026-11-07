@@ -79,8 +79,9 @@ struct CompactLeading: View {
     @ObservedObject var spotify: SpotifyService
 
     var body: some View {
-        if let alert = state.battery, let shownAt = state.batteryShownAt {
-            BatteryCompactSide(alert: alert, shownAt: shownAt, side: .leading)
+        if let alert = state.battery {
+            // Until the clock starts, the sweep waits (dark) rather than playing unseen.
+            BatteryCompactSide(alert: alert, shownAt: state.batteryShownAt ?? .distantFuture, side: .leading)
         } else {
             MusicCompactLeading(spotify: spotify)
         }
@@ -93,8 +94,9 @@ struct CompactTrailing: View {
     @ObservedObject var spotify: SpotifyService
 
     var body: some View {
-        if let alert = state.battery, let shownAt = state.batteryShownAt {
-            BatteryCompactSide(alert: alert, shownAt: shownAt, side: .trailing)
+        if let alert = state.battery {
+            // Until the clock starts, the sweep waits (dark) rather than playing unseen.
+            BatteryCompactSide(alert: alert, shownAt: state.batteryShownAt ?? .distantFuture, side: .trailing)
         } else {
             MusicCompactTrailing(spotify: spotify)
         }

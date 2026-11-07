@@ -42,12 +42,20 @@ private func power(_ percent: Int) -> BatteryReading { BatteryReading(percent: p
     #expect(policy.update(power(72), now: at(13)) == nil)
 }
 
-@Test func pluggingInAgainAfterFiveSecondsShowsAgain() {
+@Test func pluggingInAgainFiveSecondsAfterUnpluggingShowsAgain() {
     var policy = BatteryAlertPolicy()
     _ = policy.update(battery(72), now: at(0))
     _ = policy.update(power(72), now: at(10))
     _ = policy.update(battery(72), now: at(12))
-    #expect(policy.update(power(72), now: at(16)) == .charging(percent: 72))
+    #expect(policy.update(power(72), now: at(17)) == .charging(percent: 72))
+}
+
+@Test func looseCableAfterChargingAWhileShowsNothing() {
+    var policy = BatteryAlertPolicy()
+    _ = policy.update(battery(72), now: at(0))
+    _ = policy.update(power(72), now: at(10))
+    _ = policy.update(battery(80), now: at(600))
+    #expect(policy.update(power(80), now: at(601)) == nil)
 }
 
 // MARK: Low battery
@@ -98,4 +106,18 @@ private func power(_ percent: Int) -> BatteryReading { BatteryReading(percent: p
     _ = policy.update(power(25), now: at(120))
     _ = policy.update(battery(25), now: at(180))
     #expect(policy.update(battery(20), now: at(240)) == .low(percent: 20))
+}
+
+@Test func looseCableAtLowBatteryGivesNoLowWarning() {
+    var policy = BatteryAlertPolicy()
+    _ = policy.update(power(15), now: at(0))
+    #expect(policy.update(battery(15), now: at(600)) == nil)
+    #expect(policy.update(power(15), now: at(601)) == nil)
+}
+
+@Test func unpluggingAtLowBatteryWarnsOnceTheCableHasSettled() {
+    var policy = BatteryAlertPolicy()
+    _ = policy.update(power(15), now: at(0))
+    _ = policy.update(battery(15), now: at(600))
+    #expect(policy.update(battery(15), now: at(605)) == .low(percent: 15))
 }

@@ -33,24 +33,27 @@ enum BatteryAlert: Equatable {
 struct BatteryAlertPolicy {
     /// Battery levels that each warn once per discharge.
     static let lowLevels = [20, 10]
-    /// A reconnect sooner than this after the last charging alert (a loose cable) stays quiet.
+    /// How long after an unplug the cable counts as loose: a reconnect stays quiet, and so does the low check.
+    /// Call `update` again once this has passed, so a real unplug at low battery still warns.
     static let replugQuietPeriod: TimeInterval = 5
 
     private var wasOnPower: Bool?
-    private var lastChargingAlert: Date?
+    private var lastUnplugged: Date?
     private var warnedLevels: Set<Int> = []
 
     mutating func update(_ reading: BatteryReading, now: Date) -> BatteryAlert? {
         defer { wasOnPower = reading.onPower }
+        let cableJustLoose = lastUnplugged.map { now.timeIntervalSince($0) < Self.replugQuietPeriod } ?? false
 
         if reading.onPower {
             warnedLevels = []
             // No alert on the first reading: the app launching while plugged in isn't a plug-in.
-            guard wasOnPower == false else { return nil }
-            if let last = lastChargingAlert, now.timeIntervalSince(last) < Self.replugQuietPeriod { return nil }
-            lastChargingAlert = now
+            guard wasOnPower == false, !cableJustLoose else { return nil }
             return .charging(percent: reading.percent)
         }
+
+        if wasOnPower == true { lastUnplugged = now; return nil }
+        guard !cableJustLoose else { return nil }
 
         let crossed = Self.lowLevels.filter { reading.percent <= $0 && !warnedLevels.contains($0) }
         guard !crossed.isEmpty else { return nil }
