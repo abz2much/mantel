@@ -73,30 +73,36 @@ struct BatteryCompactSide: View {
     }
 }
 
-/// Left of the notch: the battery flash while one is showing, otherwise the music indicator.
+/// Left of the notch: the battery flash while one is showing, else a running timer, else the music indicator.
 struct CompactLeading: View {
     @ObservedObject var state: NotchState
     @ObservedObject var music: MusicService
+    @ObservedObject var timer: TimerService
 
     var body: some View {
         if let alert = state.battery {
             // Until the clock starts, the sweep waits (dark) rather than playing unseen.
             BatteryCompactSide(alert: alert, shownAt: state.batteryShownAt ?? .distantFuture, side: .leading)
+        } else if timer.countdown.isActive {
+            TimerCompactSide(timer: timer, side: .leading)
         } else {
             MusicCompactLeading(music: music)
         }
     }
 }
 
-/// Right of the notch: the battery level while a flash is showing, otherwise the music indicator.
+/// Right of the notch: the battery level while a flash is showing, else a running timer's time left, else music.
 struct CompactTrailing: View {
     @ObservedObject var state: NotchState
     @ObservedObject var music: MusicService
+    @ObservedObject var timer: TimerService
 
     var body: some View {
         if let alert = state.battery {
             // Until the clock starts, the sweep waits (dark) rather than playing unseen.
             BatteryCompactSide(alert: alert, shownAt: state.batteryShownAt ?? .distantFuture, side: .trailing)
+        } else if timer.countdown.isActive {
+            TimerCompactSide(timer: timer, side: .trailing)
         } else {
             MusicCompactTrailing(music: music)
         }

@@ -8,7 +8,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let battery = BatteryService()
     let clipboard = ClipboardService()
     let updates = UpdateService()
-    private(set) lazy var controller = NotchController(calendar: calendar, music: music, battery: battery, clipboard: clipboard)
+    let timer = TimerService()
+    private(set) lazy var controller = NotchController(calendar: calendar, music: music, battery: battery,
+                                                       clipboard: clipboard, timer: timer)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         controller.start()

@@ -8,7 +8,7 @@ import os
 final class NotchState: ObservableObject {
     /// What the expanded notch shows: a meeting reminder, the music card on its own (a peek on
     /// screens without a notch), or the hover panel with its tabs.
-    enum Content { case meeting, music, panel }
+    enum Content { case meeting, music, panel, timerDone }
 
     @Published var event: MeetingEvent?
     @Published var content: Content = .music
@@ -22,7 +22,7 @@ final class NotchState: ObservableObject {
     @Published var batteryShownAt: Date?
 }
 
-/// Decides what the notch shows (battery flash > meeting > music > idle) and drives it.
+/// Decides what the notch shows (battery flash > meeting > "Time's up" > music > idle) and drives it.
 @MainActor
 final class NotchController {
     private static let hoverDwell: TimeInterval = 0.3
@@ -32,12 +32,13 @@ final class NotchController {
 
     private static let log = Logger(subsystem: "local.notch.app", category: "notch")
 
-    private enum Mode: Equatable { case hidden, musicCompact, musicExpanded, idle, idleExpanded, meeting, battery }
+    private enum Mode: Equatable { case hidden, musicCompact, musicExpanded, idle, idleExpanded, meeting, battery, timerDone }
 
     private let calendar: CalendarService
     private let music: MusicService
     private let battery: BatteryService
     private let clipboard: ClipboardService
+    private let timerService: TimerService
     private let state = NotchState()
     private var notch: DynamicNotch<NotchRootView, CompactLeading, CompactTrailing>?
 
@@ -55,11 +56,18 @@ final class NotchController {
     private var timer: Timer?
     private var batteryTimer: Timer?
 
-    init(calendar: CalendarService, music: MusicService, battery: BatteryService, clipboard: ClipboardService) {
+    init(calendar: CalendarService, music: MusicService, battery: BatteryService, clipboard: ClipboardService, timer: TimerService) {
         self.calendar = calendar
         self.music = music
         self.battery = battery
         self.clipboard = clipboard
+        self.timerService = timer
+        timer.onChange = { [weak self] in
+            guard let self else { return }
+            evaluate()
+            // Hover was ignored while "Time's up" showed; if the pointer is still on the notch, open the panel.
+            if !timerService.doneShowing, notch?.isHovering == true { hoverChanged(true) }
+        }
         battery.onAlert = { [weak self] alert in self?.flashBattery(alert) }
         calendar.onUpdate = { [weak self] in self?.evaluate() }
         music.onChange = { [weak self] in self?.evaluate() }
@@ -81,6 +89,7 @@ final class NotchController {
                     music: music,
                     calendar: calendar,
                     clipboard: clipboard,
+                    timer: timerService,
                     onJoin: { [weak self] url in
                         NSWorkspace.shared.open(url)
                         self?.dismissCurrent()
@@ -88,8 +97,8 @@ final class NotchController {
                     onDismiss: { [weak self] in self?.dismissCurrent() }
                 )
             },
-            compactLeading: { [unowned self] in CompactLeading(state: state, music: music) },
-            compactTrailing: { [unowned self] in CompactTrailing(state: state, music: music) }
+            compactLeading: { [unowned self] in CompactLeading(state: state, music: music, timer: timerService) },
+            compactTrailing: { [unowned self] in CompactTrailing(state: state, music: music, timer: timerService) }
         )
         self.notch = notch
 
@@ -103,7 +112,10 @@ final class NotchController {
 
         // Local tick only: starts/ends the meeting popup at the right second.
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.evaluate() }
+            MainActor.assumeIsolated {
+                self?.timerService.checkFinished()   // catches a countdown that ended while the Mac slept
+                self?.evaluate()
+            }
         }
     }
 
@@ -200,6 +212,10 @@ final class NotchController {
                 desired = .hidden
             }
         }
+        if target == nil, timerService.doneShowing {
+            hoverExpanded = false
+            desired = .timerDone
+        }
         if state.battery != nil { desired = .battery }
         reconcile()
     }
@@ -246,6 +262,10 @@ final class NotchController {
         case .meeting:
             state.content = .meeting
             await notch?.expand(on: screen)
+        case .timerDone:
+            state.content = .timerDone
+            await notch?.expand(on: screen)
+            timerService.doneAppeared()   // its 10 seconds start now it's actually on screen
         }
         keepKeyboardInFrontApp()
     }
