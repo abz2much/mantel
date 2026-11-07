@@ -21,14 +21,16 @@ final class NotchState: ObservableObject {
     @Published var batteryShownAt: Date?
 }
 
-/// Decides what the notch shows (battery flash > meeting > "Time's up" > music > idle) and drives it.
+/// Runs one notch per screen. Decides what each shows (alerts on the active app's screen only; otherwise
+/// the notch's side pieces, or a monitor's tab) and drives them.
 @MainActor
 final class NotchController {
-    private static let hoverDwell: TimeInterval = 0.3
-    private static let hoverLeaveDelay: TimeInterval = 0.5
     private static let batteryFlashDuration: TimeInterval = 3
 
     private static let log = Logger(subsystem: "local.notch.app", category: "notch")
+
+    private typealias NotchScreenPresenter = NotchPresenter<NotchRootView, CompactLeading, CompactTrailing>
+    private typealias MonitorPresenter = NotchPresenter<NotchRootView, MonitorTabView, EmptyView>
 
     private let calendar: CalendarService
     private let music: MusicService
@@ -37,19 +39,14 @@ final class NotchController {
     private let timerService: TimerService
     private let monitors: MonitorSettings
     private let state = NotchState()
-    private var notch: NotchPresenter<NotchRootView, CompactLeading, CompactTrailing>?
 
+    private var stages: [Int: NotchStage] = [:]
     private var dismissed: Set<ReminderKey> = []
     private var currentReminder: ReminderKey?
 
-    private var desired: NotchMode = .hidden
-    private var applied: NotchMode = .hidden
-    private var reconciling = false
-
-    private var hoverExpanded = false
-    private var hoverTimer: Timer?
-    private var hoverCancellable: AnyCancellable?
     private var glowCancellable: AnyCancellable?
+    private var monitorsCancellable: AnyCancellable?
+    private var screenObserver: NSObjectProtocol?
     private var pointer: PointerWatcher?
     private var timer: Timer?
     private var batteryTimer: Timer?
@@ -65,8 +62,8 @@ final class NotchController {
         timer.onChange = { [weak self] in
             guard let self else { return }
             evaluate()
-            // Hover was ignored while "Time's up" showed; if the pointer is still on the notch, open the panel.
-            if !timerService.doneShowing, notch?.isHovering == true { hoverChanged(true) }
+            // Hover was ignored while "Time's up" showed; if the pointer is still there, open the panel.
+            if !timerService.doneShowing { stages.values.forEach { $0.recheckHover() } }
         }
         battery.onAlert = { [weak self] alert in self?.flashBattery(alert) }
         calendar.onUpdate = { [weak self] in self?.evaluate() }
@@ -74,47 +71,33 @@ final class NotchController {
     }
 
     func start() {
-        let notch = NotchPresenter(
-            expanded: { [unowned self] in
-                NotchRootView(
-                    state: state,
-                    music: music,
-                    calendar: calendar,
-                    clipboard: clipboard,
-                    timer: timerService,
-                    onJoin: { [weak self] url in
-                        NSWorkspace.shared.open(url)
-                        self?.dismissCurrent()
-                    },
-                    onDismiss: { [weak self] in self?.dismissCurrent() }
-                )
-            },
-            leading: { [unowned self] in CompactLeading(state: state, music: music, timer: timerService) },
-            trailing: { [unowned self] in CompactTrailing(state: state, music: music, timer: timerService) }
-        )
-        self.notch = notch
+        rebuildStages()
 
-        // Keeps the glow around the shape in step with the open tab and the album, which the notch's view doesn't watch.
+        // Plugging in a monitor, closing the lid or changing resolution: one stage per screen, then re-decide.
+        screenObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.rebuildStages()
+                self?.evaluate()
+            }
+        }
+
+        // Keeps the glow around each shape in step with the open tab and the album, which the views don't watch.
         glowCancellable = Publishers.CombineLatest3(state.$content, state.$tab, music.objectWillChange.prepend(()))
             .receive(on: RunLoop.main)
-            .sink { [weak self] content, tab, _ in
-                MainActor.assumeIsolated {
-                    guard let self else { return }
-                    let colour = NotchDecision.glowColor(content: content, tab: tab, accent: self.music.accent)
-                    if self.notch?.glowColor != colour { self.notch?.glowColor = colour }
-                }
+            .sink { [weak self] _, _, _ in
+                MainActor.assumeIsolated { self?.updateGlow() }
             }
 
-        // Hover state comes from the notch's view; the dwell/leave timing and expansion are ours.
-        hoverCancellable = notch.$isHovering
-            .removeDuplicates()
+        monitorsCancellable = monitors.objectWillChange
             .receive(on: RunLoop.main)
-            .sink { [weak self] hovering in
-                MainActor.assumeIsolated { self?.hoverChanged(hovering) }
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated { self?.evaluate() }
             }
 
         // Hover and click-through follow the pointer position.
-        pointer = PointerWatcher { [weak self] point in self?.notch?.pointerMoved(to: point) }
+        pointer = PointerWatcher { [weak self] point in self?.pointerMoved(point) }
         pointer?.start()
 
         // Local tick only: starts/ends the meeting popup at the right second.
@@ -124,22 +107,129 @@ final class NotchController {
                 self?.evaluate()
             }
         }
+        evaluate()
     }
 
-    /// Shows the battery flash for a few seconds over whatever the notch shows, then puts that back.
-    private func flashBattery(_ alert: BatteryAlert) {
-        // Compact areas only exist beside a real notch; elsewhere there's nowhere to flash.
-        guard Self.targetScreen().hasNotchInset else { return }
-        state.battery = alert
-        if applied == .battery {
-            startFlashClock()   // already compact: a new alert restarts the flash
+    // MARK: Screens
+
+    /// Which stages to add and which to drop, given the screens now attached.
+    nonisolated static func stageIDs(for screens: [ScreenInfo], current: [Int]) -> (add: [Int], remove: [Int]) {
+        let now = Set(screens.map(\.id))
+        return (add: screens.map(\.id).filter { !current.contains($0) },
+                remove: current.filter { !now.contains($0) }.sorted())
+    }
+
+    private static func screenInfos() -> [ScreenInfo] {
+        NSScreen.screens.compactMap { screen in
+            screen.screenNumber.map {
+                ScreenInfo(id: $0.intValue, hasNotch: screen.notchMetrics.hasNotch, isMain: screen == NSScreen.screens.first)
+            }
+        }
+    }
+
+    private static func screen(for id: Int) -> NSScreen? {
+        NSScreen.screens.first { $0.screenNumber?.intValue == id }
+    }
+
+    private func rebuildStages() {
+        let infos = Self.screenInfos()
+        let diff = Self.stageIDs(for: infos, current: Array(stages.keys))
+        for id in diff.remove {
+            guard let stage = stages.removeValue(forKey: id) else { continue }
+            Task { await stage.presenter.hide() }
+        }
+        for info in infos where diff.add.contains(info.id) {
+            stages[info.id] = makeStage(info)
+        }
+        updateGlow()
+    }
+
+    private func makeStage(_ info: ScreenInfo) -> NotchStage {
+        let flags = StageFlags()
+        let presenter: NotchPresenting
+        if info.hasNotch {
+            presenter = NotchScreenPresenter(
+                expanded: { [unowned self] in rootView() },
+                leading: { [unowned self] in CompactLeading(state: state, music: music, timer: timerService, flags: flags) },
+                trailing: { [unowned self] in CompactTrailing(state: state, music: music, timer: timerService, flags: flags) }
+            )
         } else {
-            state.batteryShownAt = nil   // the clock starts once the compact notch is showing
+            presenter = MonitorPresenter(
+                expanded: { [unowned self] in rootView() },
+                leading: { [unowned self] in MonitorTabView(state: state, music: music, timer: timerService, flags: flags) },
+                trailing: { EmptyView() }
+            )
+        }
+        let id = info.id
+        let stage = NotchStage(screenID: id, presenter: presenter, flags: flags) { [weak self] expanded in
+            self?.hoverExpandedChanged(on: id, expanded: expanded)
+        }
+        return stage
+    }
+
+    private func rootView() -> NotchRootView {
+        NotchRootView(
+            state: state,
+            music: music,
+            calendar: calendar,
+            clipboard: clipboard,
+            timer: timerService,
+            onJoin: { [weak self] url in
+                NSWorkspace.shared.open(url)
+                self?.dismissCurrent()
+            },
+            onDismiss: { [weak self] in self?.dismissCurrent() }
+        )
+    }
+
+    private func updateGlow() {
+        let colour = NotchDecision.glowColor(content: state.content, tab: state.tab, accent: music.accent)
+        for stage in stages.values where stage.presenter.glowColor != colour {
+            stage.presenter.glowColor = colour
+        }
+    }
+
+    // MARK: Hover
+
+    private func pointerMoved(_ point: CGPoint) {
+        for stage in stages.values {
+            let zone: CGRect?
+            if let screen = Self.screen(for: stage.screenID), !screen.notchMetrics.hasNotch, monitors.enabled {
+                zone = NotchGeometry.hoverZone(screenFrame: screen.frame)
+            } else {
+                zone = nil
+            }
+            stage.pointerMoved(to: point, zone: zone)
+        }
+    }
+
+    /// Only one panel is ever open: opening one closes any other.
+    private func hoverExpandedChanged(on id: Int, expanded: Bool) {
+        Self.log.info("hover \(expanded, privacy: .public) on \(id, privacy: .public)")
+        if expanded {
+            state.tab = HoverTab.opening(last: state.lastTab, hasTrack: music.track != nil)
+            for stage in stages.values where stage.screenID != id { stage.hoverExpanded = false }
+        }
+        evaluate()
+    }
+
+    // MARK: Battery
+
+    /// Shows the battery flash for a few seconds on the alert screen, then puts back what was there.
+    private func flashBattery(_ alert: BatteryAlert) {
+        let infos = Self.screenInfos()
+        guard let id = NotchDecision.alertScreen(screens: infos, active: ActiveScreen.current(), monitorsEnabled: monitors.enabled),
+              let info = infos.first(where: { $0.id == id }), info.hasNotch || monitors.enabled else { return }
+        state.battery = alert
+        if stages[id]?.applied == .battery {
+            startFlashClock()   // already showing: a new alert restarts the flash
+        } else {
+            state.batteryShownAt = nil   // the clock starts once the compact view is showing
             evaluate()
         }
     }
 
-    /// Starts the sweep and the 3 s countdown. Called once the compact areas are on screen,
+    /// Starts the sweep and the 3 s countdown. Called once the compact view is on screen,
     /// so shrinking from an expanded card first doesn't eat the start of the sweep.
     private func startFlashClock() {
         state.batteryShownAt = Date()
@@ -155,40 +245,13 @@ final class NotchController {
         state.battery = nil
         state.batteryShownAt = nil
         evaluate()
-        // Hover was ignored during the flash; if the pointer is still on the notch, open it now.
-        if notch?.isHovering == true { hoverChanged(true) }
+        // Hover was ignored during the flash; if the pointer is still there, open the panel now.
+        stages.values.forEach { $0.recheckHover() }
     }
 
     private func dismissCurrent() {
         if let key = currentReminder { dismissed.insert(key) }
         evaluate()
-    }
-
-    // MARK: Hover
-
-    private func hoverChanged(_ hovering: Bool) {
-        Self.log.info("hover \(hovering, privacy: .public)")
-        hoverTimer?.invalidate()
-        hoverTimer = nil
-        if hovering {
-            guard desired == .musicCompact || desired == .idle else { return }
-            hoverTimer = Timer.scheduledTimer(withTimeInterval: Self.hoverDwell, repeats: false) { [weak self] _ in
-                MainActor.assumeIsolated {
-                    guard let self, self.notch?.isHovering == true else { return }
-                    self.state.tab = HoverTab.opening(last: self.state.lastTab, hasTrack: self.music.track != nil)
-                    self.hoverExpanded = true
-                    self.evaluate()
-                }
-            }
-        } else if hoverExpanded {
-            hoverTimer = Timer.scheduledTimer(withTimeInterval: Self.hoverLeaveDelay, repeats: false) { [weak self] _ in
-                MainActor.assumeIsolated {
-                    guard let self, self.notch?.isHovering != true else { return }
-                    self.hoverExpanded = false
-                    self.evaluate()
-                }
-            }
-        }
     }
 
     // MARK: Decide
@@ -197,81 +260,63 @@ final class NotchController {
         let now = Date()
         let target = ReminderPicker.pick(calendar.events, now: now, dismissed: dismissed)
         dismissed = dismissed.filter { key in calendar.events.contains { $0.id == key.eventID } }
-
         if let target {
             state.event = target.event   // keeps title/link fresh after refetches
             currentReminder = target.key
         } else {
             currentReminder = nil
         }
-        let inputs = NotchInputs(
-            hasReminder: target != nil,
-            musicShowsCard: music.showsCard,
-            screenHasNotch: Self.targetScreen().hasNotchInset,
-            hoverExpanded: hoverExpanded,
-            timerDoneShowing: timerService.doneShowing,
-            batteryFlashing: state.battery != nil
-        )
-        hoverExpanded = NotchDecision.keepsHoverExpanded(inputs)
-        desired = NotchDecision.mode(for: inputs)
-        reconcile()
-    }
 
-    /// Applies `desired` one transition at a time; re-checks afterwards in case it changed mid-animation.
-    private func reconcile() {
-        guard !reconciling, applied != desired else { return }
-        reconciling = true
-        Task {
-            while applied != desired {
-                let mode = desired
-                applied = mode
-                Self.log.info("mode -> \(String(describing: mode), privacy: .public)")
-                await perform(mode)
+        let infos = Self.screenInfos()
+        let alertID = NotchDecision.alertScreen(screens: infos, active: ActiveScreen.current(), monitorsEnabled: monitors.enabled)
+        let anyNotch = infos.contains(where: \.hasNotch)
+        for info in infos {
+            guard let stage = stages[info.id] else { continue }
+            var inputs = NotchInputs(
+                hasReminder: target != nil,
+                musicShowsCard: music.showsCard,
+                screenHasNotch: info.hasNotch,
+                hoverExpanded: stage.hoverExpanded,
+                isAlertScreen: info.id == alertID,
+                timerDoneShowing: timerService.doneShowing,
+                batteryFlashing: state.battery != nil,
+                timerRunning: timerService.countdown.isActive,
+                monitorsEnabled: monitors.enabled,
+                tabEnabled: monitors.tabEnabled,
+                anyNotchScreen: anyNotch
+            )
+            stage.hoverExpanded = NotchDecision.keepsHoverExpanded(inputs)
+            inputs.hoverExpanded = stage.hoverExpanded
+            let mode = NotchDecision.mode(for: inputs)
+            stage.apply(mode) { [weak self, weak stage] mode in
+                guard let self, let stage else { return }
+                await perform(mode, on: stage)
             }
-            reconciling = false
         }
     }
 
-    /// The notch's window can take the keyboard; by default a click there keeps it, so ⌘V straight after
-    /// clicking a clipboard row would land in Mantel. This keeps it only when something needs typing.
-    /// `NotchPanel` sets it too; this is a guard in case the window is ever rebuilt differently.
-    private func keepKeyboardInFrontApp() {
-        notch?.window?.becomesKeyOnlyIfNeeded = true
-    }
-
-    private func perform(_ mode: NotchMode) async {
-        // The music tab's progress bar needs the position; the panel opens from both music and idle.
-        music.setPolling(mode == .musicExpanded || mode == .idleExpanded)
-        let screen = Self.targetScreen()
+    private func perform(_ mode: NotchMode, on stage: NotchStage) async {
+        Self.log.info("screen \(stage.screenID, privacy: .public) mode -> \(String(describing: mode), privacy: .public)")
+        // The music tab's progress bar needs the position; any open panel can show it.
+        music.setPolling(stages.values.contains { [.musicExpanded, .idleExpanded].contains($0.applied) })
+        stage.flags.showsBattery = mode == .battery
+        guard let screen = Self.screen(for: stage.screenID) else { return }
         switch mode {
-        case .hidden: await notch?.hide()
-        case .musicCompact, .idle, .tab: await notch?.compact(on: screen)
+        case .hidden: await stage.presenter.hide()
+        case .musicCompact, .idle, .tab: await stage.presenter.compact(on: screen)
         case .battery:
-            await notch?.compact(on: screen)
-            if desired == .battery { startFlashClock() }
-        case .musicExpanded:
+            await stage.presenter.compact(on: screen)
+            if stage.desired == .battery { startFlashClock() }
+        case .musicExpanded, .idleExpanded:
             state.content = .panel
-            await notch?.expand(on: screen)
-        case .idleExpanded:
-            state.content = .panel
-            await notch?.expand(on: screen)
+            await stage.presenter.expand(on: screen)
         case .meeting:
             state.content = .meeting
-            await notch?.expand(on: screen)
+            await stage.presenter.expand(on: screen)
         case .timerDone:
             state.content = .timerDone
-            await notch?.expand(on: screen)
+            await stage.presenter.expand(on: screen)
             timerService.doneAppeared()   // its 10 seconds start now it's actually on screen
         }
-        keepKeyboardInFrontApp()
     }
-
-    /// Prefer the built-in display (the one with a notch); otherwise the main screen.
-    private static func targetScreen() -> NSScreen {
-        NSScreen.screens.first { $0.notchMetrics.hasNotch } ?? NSScreen.screens[0]
-    }
-}
-
-private extension NSScreen {
-    var hasNotchInset: Bool { notchMetrics.hasNotch }
 }

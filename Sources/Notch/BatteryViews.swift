@@ -78,9 +78,10 @@ struct CompactLeading: View {
     @ObservedObject var state: NotchState
     @ObservedObject var music: MusicService
     @ObservedObject var timer: TimerService
+    @ObservedObject var flags: StageFlags
 
     var body: some View {
-        if let alert = state.battery {
+        if flags.showsBattery, let alert = state.battery {
             // Until the clock starts, the sweep waits (dark) rather than playing unseen.
             BatteryCompactSide(alert: alert, shownAt: state.batteryShownAt ?? .distantFuture, side: .leading)
         } else if timer.countdown.isActive {
@@ -96,9 +97,10 @@ struct CompactTrailing: View {
     @ObservedObject var state: NotchState
     @ObservedObject var music: MusicService
     @ObservedObject var timer: TimerService
+    @ObservedObject var flags: StageFlags
 
     var body: some View {
-        if let alert = state.battery {
+        if flags.showsBattery, let alert = state.battery {
             // Until the clock starts, the sweep waits (dark) rather than playing unseen.
             BatteryCompactSide(alert: alert, shownAt: state.batteryShownAt ?? .distantFuture, side: .trailing)
         } else if timer.countdown.isActive {
