@@ -48,16 +48,19 @@ struct MenuContent: View {
     @ObservedObject var calendar: CalendarService
     @ObservedObject var music: MusicService
     @ObservedObject var updates: UpdateService
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         let warnings = MenuWarnings.make(calendarAccess: calendar.hasAccess, musicEnabled: music.musicEnabled,
                                          blockedApps: music.blockedApps)
-        ForEach(Array(warnings.enumerated()), id: \.offset) { _, warning in
+        ForEach(warnings, id: \.self) { warning in
             switch warning {
             case .calendarAccess:
-                Button("⚠︎ Calendar access is off: Open Privacy Settings…") { SystemSettings.open(.calendars) }
+                Text("⚠︎ Calendar access is off")
+                Button("Open Privacy Settings…") { SystemSettings.open(.calendars) }
             case .automation(let apps):
-                Button("⚠︎ \(apps) control is blocked: Open Automation Settings…") { SystemSettings.open(.automation) }
+                Text("⚠︎ \(apps) control is blocked")
+                Button("Open Automation Settings…") { SystemSettings.open(.automation) }
             }
         }
         if !warnings.isEmpty { Divider() }
@@ -65,8 +68,12 @@ struct MenuContent: View {
         Button("Check for Updates Now") { updates.checkNow() }
             .disabled(updates.status == .checking)
         Divider()
-        SettingsLink { Text("Settings…") }
-            .keyboardShortcut(",")
+        Button("Settings…") {
+            // A menu bar app isn't frontmost: bring Mantel forward so Settings never opens behind other windows.
+            NSApp.activate()
+            openSettings()
+        }
+        .keyboardShortcut(",")
         Divider()
         Button("Quit Mantel") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")

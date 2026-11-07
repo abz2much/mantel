@@ -31,3 +31,17 @@ import Testing
 @Test func noWarningsWhenAllIsWell() {
     #expect(MenuWarnings.make(calendarAccess: true, musicEnabled: true, blockedApps: []).isEmpty)
 }
+
+@Test func theDefaultCountsAsDoneOnceItTookEffect() {
+    #expect(LoginItemRules.defaultIsDone(afterAttempt: .enabled))
+    #expect(LoginItemRules.defaultIsDone(afterAttempt: .needsApproval))
+}
+
+@Test func aFailedFirstAttemptIsTriedAgainNextLaunch() {
+    #expect(!LoginItemRules.defaultIsDone(afterAttempt: .notRegistered))
+}
+
+@Test func theUpdateLineSaysWhenANewVersionIsAvailable() {
+    #expect(UpdateStatusText.line(version: AppVersion(1, 5, 0), status: .available("1.6.0")) == "Mantel 1.6.0 is available")
+    #expect(UpdateStatusText.line(version: AppVersion(1, 5, 0), status: .upToDate) == "Mantel 1.5.0: up to date")
+}

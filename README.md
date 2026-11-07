@@ -149,7 +149,7 @@ Click the menu bar icon for:
 
 - anything that needs your attention, such as calendar access being off, with a button to fix it;
 - the version and update status, and **Check for Updates Now**;
-- **Settings… (⌘,)**, with three sections:
+- **Settings…** (or ⌘, while the menu is open), with three sections:
   - **General**: Open at Login, Install Updates Automatically;
   - **Features**: music card, album art, charging animation, low battery alert, clipboard history (and clearing it);
   - **Calendars**: which calendars to watch;

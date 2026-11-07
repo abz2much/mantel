@@ -17,9 +17,9 @@ struct SettingsView: View {
             calendars.tabItem { Label("Calendars", systemImage: "calendar") }
         }
         .frame(width: 480)
-        .onAppear {
-            // A menu bar app isn't frontmost; bring the window forward so it doesn't open behind others.
-            NSApp.activate(ignoringOtherApps: true)
+        .onAppear { loginItem.refresh() }
+        // Coming back from System Settings (approving or removing the login item) refreshes the switch.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             loginItem.refresh()
         }
     }
@@ -115,8 +115,12 @@ struct SettingsView: View {
 enum UpdateStatusText {
     @MainActor
     static func line(_ updates: UpdateService) -> String {
-        let version = updates.currentVersion.map { "Mantel \($0)" } ?? "Mantel"
-        switch updates.status {
+        line(version: updates.currentVersion, status: updates.status)
+    }
+
+    static func line(version current: AppVersion?, status: UpdateService.Status) -> String {
+        let version = current.map { "Mantel \($0)" } ?? "Mantel"
+        switch status {
         case .notChecked: return version
         case .checking: return "\(version): checking for updates…"
         case .upToDate: return "\(version): up to date"

@@ -32,10 +32,12 @@ struct HoverPanelView: View {
         .padding(.bottom, 8)
         .frame(width: Self.width, height: Self.contentHeight + 40, alignment: .top)
         .background {
-            // Warm glow on every tab, except Music when the album art brings its own colour.
-            if !(state.tab == .music && music.track != nil && music.accent != nil) {
-                MantelStyle.topGlow.padding(.horizontal, -20)   // starts below the notch, which stays black
-            }
+            // Warm glow on every tab, except Music when the album art brings its own colour. It fades rather
+            // than snapping, matching the music card's own colour wash.
+            let showGlow = !(state.tab == .music && music.track != nil && music.accent != nil)
+            MantelStyle.topGlow.padding(.horizontal, -20)   // starts below the notch, which stays black
+                .opacity(showGlow ? 1 : 0)
+                .animation(.easeInOut(duration: 0.6), value: showGlow)
         }
         .environment(\.colorScheme, .dark)
     }

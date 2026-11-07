@@ -20,9 +20,20 @@ final class LoginItemService: ObservableObject {
         let done = UserDefaults.standard.bool(forKey: Self.defaultAppliedKey)
         if LoginItemRules.registerByDefault(alreadyDone: done, isInstalled: installed) {
             setEnabled(true)
-            UserDefaults.standard.set(true, forKey: Self.defaultAppliedKey)
+            // Only once it took effect; if macOS refused, try again next launch.
+            if LoginItemRules.defaultIsDone(afterAttempt: state) {
+                UserDefaults.standard.set(true, forKey: Self.defaultAppliedKey)
+            }
         }
         refresh()
+    }
+
+    private var state: LoginItemRules.State {
+        switch SMAppService.mainApp.status {
+        case .enabled: .enabled
+        case .requiresApproval: .needsApproval
+        default: .notRegistered
+        }
     }
 
     func setEnabled(_ on: Bool) {
