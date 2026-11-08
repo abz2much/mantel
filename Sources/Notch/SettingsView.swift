@@ -76,6 +76,16 @@ struct SettingsView: View {
             }
             Section("Clipboard") {
                 Toggle("Clipboard history", isOn: $clipboard.enabled)
+                Toggle("Open with a shortcut", isOn: $clipboard.shortcutEnabled)
+                    .padding(.leading, 16)
+                    .disabled(!clipboard.enabled)
+                HStack(alignment: .top) {
+                    Text("Shortcut")
+                    Spacer()
+                    ShortcutRecorder(clipboard: clipboard)
+                }
+                .padding(.leading, 32)
+                .disabled(!clipboard.opensWithShortcut && !clipboard.recordingShortcut)
                 HStack {
                     Text("Kept in memory only, never saved.").font(.caption).foregroundStyle(.secondary)
                     Spacer()

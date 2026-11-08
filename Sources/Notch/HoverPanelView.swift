@@ -20,7 +20,8 @@ struct HoverPanelView: View {
             Group {
                 switch state.tab {
                 case .music: musicTab
-                case .clipboard: ClipboardListView(items: clipboard.items, enabled: clipboard.enabled, onCopy: clipboard.copy)
+                case .clipboard: ClipboardListView(items: clipboard.items, enabled: clipboard.enabled, onCopy: clipboard.copy,
+                                                   selection: state.clipboardSelection)
                 case .today: TodayView(events: calendar.events, calendarAccess: calendar.hasAccess, onJoin: onJoin)
                 case .timer: TimerTabView(timer: timer)
                 }
@@ -87,6 +88,8 @@ struct ClipboardListView: View {
     let items: [ClipboardItem]
     let enabled: Bool
     let onCopy: (ClipboardItem) -> Void
+    /// The row chosen with the arrow keys when opened with ⌃⌥V; rows then show their number (1–9).
+    var selection: Int? = nil
     /// Off only for screenshots: SwiftUI's image renderer can't draw scroll views.
     var scrolls = true
     @State private var copiedText: String?
@@ -100,10 +103,21 @@ struct ClipboardListView: View {
         } else {
             TimelineView(.periodic(from: .now, by: 30)) { context in
                 let rows = VStack(spacing: 2) {
-                    ForEach(items) { row($0, now: context.date) }
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                        row(item, index: index, now: context.date).id(index)
+                    }
                 }
                 if scrolls {
-                    ScrollView { rows }.scrollIndicators(.automatic)   // about 7 rows show; more scroll
+                    ScrollViewReader { proxy in
+                        ScrollView { rows }.scrollIndicators(.automatic)   // about 7 rows show; more scroll
+                            .onChange(of: selection) { _, row in
+                                if let row { withAnimation(.snappy) { proxy.scrollTo(row) } }
+                            }
+                            .onAppear {
+                                // Opened with ⌃⌥V: start at the top, whatever an earlier hover scrolled to.
+                                if let selection { proxy.scrollTo(selection) }
+                            }
+                    }
                 } else {
                     rows
                 }
@@ -111,7 +125,7 @@ struct ClipboardListView: View {
         }
     }
 
-    private func row(_ item: ClipboardItem, now: Date) -> some View {
+    private func row(_ item: ClipboardItem, index: Int, now: Date) -> some View {
         // Matched by text: copying moves the item to the top as a new row.
         let copied = copiedText == item.text
         return Button {
@@ -125,6 +139,12 @@ struct ClipboardListView: View {
             }
         } label: {
             HStack(spacing: 8) {
+                if selection != nil {
+                    Text(index < 9 ? "\(index + 1)" : "")
+                        .font(.caption2.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(MantelStyle.amber)
+                        .frame(width: 10)
+                }
                 Text(item.preview)
                     .font(.system(size: 12))
                     .lineLimit(1)
@@ -143,7 +163,8 @@ struct ClipboardListView: View {
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
-            .background(RoundedRectangle(cornerRadius: 6).fill(.white.opacity(hoveredID == item.id ? 0.1 : 0)))
+            .background(RoundedRectangle(cornerRadius: 6).fill(.white.opacity(hoveredID == item.id || selection == index ? 0.1 : 0)))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(MantelStyle.amber.opacity(selection == index ? 0.6 : 0), lineWidth: 1))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

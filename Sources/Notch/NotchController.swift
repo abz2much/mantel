@@ -19,6 +19,8 @@ final class NotchState: ObservableObject {
     /// The battery flash showing in the compact notch, if any, and when it started.
     @Published var battery: BatteryAlert?
     @Published var batteryShownAt: Date?
+    /// The highlighted clipboard row while the panel was opened with ⌃⌥V; nil otherwise.
+    @Published var clipboardSelection: Int?
 }
 
 /// Runs one notch per screen. Decides what each shows (alerts on the active app's screen only; otherwise
@@ -50,6 +52,11 @@ final class NotchController {
     private var pointer: PointerWatcher?
     private var timer: Timer?
     private var batteryTimer: Timer?
+    private var hotKey: GlobalHotKey?
+    private var registeredShortcut: Shortcut?
+    private var clipboardCancellable: AnyCancellable?
+    private var keyMonitor: Any?
+    private var resignObserver: NSObjectProtocol?
 
     init(calendar: CalendarService, music: MusicService, battery: BatteryService, clipboard: ClipboardService, timer: TimerService,
          monitors: MonitorSettings) {
@@ -96,6 +103,13 @@ final class NotchController {
                 MainActor.assumeIsolated { self?.evaluate() }
             }
 
+        // The shortcut (⌃⌥V unless changed) opens the clipboard panel; registered only while the setting is on.
+        clipboardCancellable = clipboard.objectWillChange.prepend(())
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated { self?.updateHotKey() }
+            }
+
         // Hover and click-through follow the pointer position.
         pointer = PointerWatcher { [weak self] point in self?.pointerMoved(point) }
         pointer?.start()
@@ -135,6 +149,8 @@ final class NotchController {
         let infos = Self.screenInfos()
         let diff = Self.stageIDs(for: infos, current: Array(stages.keys))
         for id in diff.remove {
+            // The shortcut panel was on that screen: finish it properly, so no key listener is left behind.
+            if stages[id]?.pinned == true { closeClipboard() }
             stages.removeValue(forKey: id)?.tearDown()
         }
         for info in infos where diff.add.contains(info.id) {
@@ -210,6 +226,104 @@ final class NotchController {
             for stage in stages.values where stage.screenID != id { stage.hoverExpanded = false }
         }
         evaluate()
+    }
+
+    // MARK: Clipboard shortcut
+
+    /// Registers the chosen shortcut, re-registering when it changes; tells Settings if another app owns it.
+    private func updateHotKey() {
+        guard clipboard.opensWithShortcut else {
+            hotKey?.unregister()
+            hotKey = nil
+            registeredShortcut = nil
+            closeClipboard()
+            if clipboard.shortcutTaken { clipboard.shortcutTaken = false }
+            return
+        }
+        guard registeredShortcut != clipboard.shortcut || hotKey?.isRegistered != true else { return }
+        hotKey?.unregister()
+        let key = GlobalHotKey(clipboard.shortcut) { [weak self] in self?.toggleClipboard() }
+        // If another app owns it, this is tried again on every clipboard change, so it starts working once freed.
+        key.register()
+        hotKey = key
+        registeredShortcut = clipboard.shortcut
+        if clipboard.shortcutTaken != !key.isRegistered { clipboard.shortcutTaken = !key.isRegistered }
+    }
+
+    private var pinnedStage: NotchStage? { stages.values.first { $0.pinned } }
+
+    /// ⌃⌥V: opens the panel on the Clipboard tab on the active app's screen, or closes it if open.
+    private func toggleClipboard() {
+        if pinnedStage != nil { closeClipboard(); return }
+        let infos = Self.screenInfos()
+        guard let id = NotchDecision.alertScreen(screens: infos, active: ActiveScreen.current(), monitorsEnabled: monitors.enabled),
+              let stage = stages[id] else { return }
+        for other in stages.values where other !== stage { other.hoverExpanded = false }
+        state.tab = .clipboard
+        state.clipboardSelection = 0
+        stage.pin()
+        evaluate()
+        // A meeting or "Time's up" has the panel; the shortcut does nothing then.
+        guard stage.hoverExpanded else { stage.unpin(); state.clipboardSelection = nil; return }
+        startKeyboard()
+        // Already open from hovering: nothing new to show, so take the keyboard now.
+        if stage.applied == stage.desired, [.musicExpanded, .idleExpanded].contains(stage.applied),
+           let window = stage.presenter.window {
+            takeKeyboard(window)
+        }
+    }
+
+    /// Listens for ↑ ↓ Return 1–9 Esc while the pinned panel has the keyboard.
+    private func startKeyboard() {
+        guard keyMonitor == nil else { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            MainActor.assumeIsolated { self?.handleKey(event) == true ? nil : event }
+        }
+    }
+
+    private func handleKey(_ event: NSEvent) -> Bool {
+        guard pinnedStage != nil,
+              event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
+              let key = ClipboardKeys.Key(keyCode: event.keyCode, characters: event.charactersIgnoringModifiers) else { return false }
+        let items = clipboard.enabled ? clipboard.items : []
+        switch ClipboardKeys.handle(key, selection: state.clipboardSelection ?? 0, count: items.count,
+                                    onClipboardTab: state.tab == .clipboard) {
+        case .select(let row): state.clipboardSelection = row
+        case .copy(let row):
+            clipboard.copy(items[row])
+            closeClipboard()
+        case .close: closeClipboard()
+        case .pass: return false
+        }
+        return true
+    }
+
+    /// Takes the keyboard once the pinned panel is on screen, and closes if the user clicks elsewhere.
+    private func takeKeyboard(_ window: NSPanel) {
+        window.makeKey()
+        if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
+        resignObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didResignKeyNotification, object: window, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.closeClipboard() }
+        }
+    }
+
+    private func closeClipboard() {
+        if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+        keyMonitor = nil
+        if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
+        resignObserver = nil
+        state.clipboardSelection = nil
+        guard let stage = pinnedStage else { return }
+        stage.unpin()
+        // Hand the keyboard back to the app in front, so ⌘V pastes there.
+        if let window = stage.presenter.window, window.isKeyWindow {
+            window.orderOut(nil)
+            window.orderFrontRegardless()
+        }
+        evaluate()
+        stage.recheckHover()
     }
 
     // MARK: Battery
@@ -292,6 +406,8 @@ final class NotchController {
                 await perform(mode, on: stage)
             }
         }
+        // A meeting or "Time's up" took the panel: the shortcut panel is over.
+        if let pinned = pinnedStage, !pinned.hoverExpanded { closeClipboard() }
     }
 
     private func perform(_ mode: NotchMode, on stage: NotchStage) async {
@@ -309,6 +425,7 @@ final class NotchController {
         case .musicExpanded, .idleExpanded:
             state.content = .panel
             await stage.presenter.expand(on: screen)
+            if stage.pinned, stage.desired == mode, let window = stage.presenter.window { takeKeyboard(window) }
         case .meeting:
             state.content = .meeting
             await stage.presenter.expand(on: screen)

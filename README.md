@@ -12,7 +12,7 @@ Mantel is a small Mac app that lives in your MacBook's notch. It tells you when 
 
 Five minutes before a meeting, the notch drops down with a countdown, and it comes back for the final minute. If the invite has a Google Meet, Zoom or Teams link, there's a Join button right there. Meetings you've declined are left out.
 
-While music plays, a small cover sits beside the notch. Hover over the notch and a panel opens with four tabs. Music has the full player, with album art and a progress bar you can drag. Clipboard lists the last ten things you copied, and clicking one puts it back on your clipboard so you can paste it. Today shows the rest of your meetings for the day. Timer runs a 5, 15, 25 or 45 minute countdown, and the 25 minute one is a focus session that offers you a short break when it ends.
+While music plays, a small cover sits beside the notch. Hover over the notch and a panel opens with four tabs. Music has the full player, with album art and a progress bar you can drag. Clipboard lists the last ten things you copied, and clicking one puts it back on your clipboard so you can paste it. You can also press ⌃⌥V to open it from the keyboard, or pick your own shortcut in Settings. Use the arrow keys and Return, or press 1 to 9, to copy an item, then paste it with ⌘V. Esc closes the panel. Today shows the rest of your meetings for the day. Timer runs a 5, 15, 25 or 45 minute countdown, and the 25 minute one is a focus session that offers you a short break when it ends.
 
 When you plug in, a green glow sweeps across the notch with your battery level. If you're running low, you get the same sweep in red at 20% and again at 10%.
 
@@ -50,7 +50,7 @@ Mantel keeps itself up to date. It checks for new versions in the background, in
 
 The menu bar icon gives you the update status, a way to check for updates, Settings and Quit. If something needs your attention, like calendar access being turned off, a warning with a button to fix it appears at the top.
 
-In Settings you can choose whether Mantel opens at login and installs updates automatically. You can also turn the music card, album art, battery alerts and clipboard history on or off, and pick which calendars to watch. Under Monitors you can stop Mantel appearing on screens without a notch, or keep it there but hide the small tab. With the lid closed and Mantel turned off for monitors, meeting reminders still appear, so you don't miss one.
+In Settings you can choose whether Mantel opens at login and installs updates automatically. You can also turn the music card, album art, battery alerts, clipboard history and its shortcut on or off, change that shortcut, and pick which calendars to watch. Under Monitors you can stop Mantel appearing on screens without a notch, or keep it there but hide the small tab. With the lid closed and Mantel turned off for monitors, meeting reminders still appear, so you don't miss one.
 
 ## Privacy
 

@@ -79,3 +79,18 @@ private func makeService() -> (ClipboardService, NSPasteboard) {
     #expect(service.items.isEmpty)
     board.releaseGlobally()
 }
+
+@MainActor
+@Test func shortcutIsOnByDefaultAndNeedsHistory() {
+    let defaults = UserDefaults(suiteName: "test.\(UUID())")!
+    let service = ClipboardService(pasteboard: NSPasteboard(name: .init("test.\(UUID())")), defaults: defaults)
+    #expect(service.shortcutEnabled)
+    #expect(service.opensWithShortcut)
+    service.enabled = false
+    #expect(!service.opensWithShortcut)
+    service.enabled = true
+    service.shortcutEnabled = false
+    #expect(!service.opensWithShortcut)
+    let again = ClipboardService(pasteboard: NSPasteboard(name: .init("test.\(UUID())")), defaults: defaults)
+    #expect(!again.shortcutEnabled)
+}
