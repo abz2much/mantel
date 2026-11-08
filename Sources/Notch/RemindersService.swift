@@ -29,6 +29,7 @@ final class RemindersService: ObservableObject {
     private let defaults: UserDefaults
     private var observer: NSObjectProtocol?
     private var timer: Timer?
+    private var starting = false
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -37,7 +38,9 @@ final class RemindersService: ObservableObject {
     }
 
     func start() async {
-        guard enabled, observer == nil else { return }
+        guard enabled, observer == nil, !starting else { return }
+        starting = true
+        defer { starting = false }
         do {
             hasAccess = try await store.requestFullAccessToReminders()
         } catch {
@@ -99,10 +102,15 @@ final class RemindersService: ObservableObject {
         }
     }
 
-    /// Adds a reminder due today to the default Reminders list, so it shows in Today straight away.
-    func add(_ typed: String) {
-        guard hasAccess, let title = ReminderAgenda.newTitle(from: typed),
-              let list = store.defaultCalendarForNewReminders() else { return }
+    /// Adds a reminder due today to a list shown in Today, so it appears straight away.
+    /// Returns false if it couldn't be saved, so the typed text can be kept.
+    @discardableResult
+    func add(_ typed: String) -> Bool {
+        let shown = lists.map(\.calendarIdentifier).filter { isSelected(listID: $0) }
+        guard enabled, hasAccess, let title = ReminderAgenda.newTitle(from: typed),
+              let listID = ReminderAgenda.listForNew(defaultID: store.defaultCalendarForNewReminders()?.calendarIdentifier,
+                                                     shown: shown),
+              let list = lists.first(where: { $0.calendarIdentifier == listID }) else { return false }
         let reminder = EKReminder(eventStore: store)
         reminder.title = title
         reminder.calendar = list
@@ -110,8 +118,10 @@ final class RemindersService: ObservableObject {
         do {
             try store.save(reminder, commit: true)
             refresh()
+            return true
         } catch {
             Self.log.error("couldn't add reminder: \(error.localizedDescription, privacy: .public)")
+            return false
         }
     }
 

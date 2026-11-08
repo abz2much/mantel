@@ -41,6 +41,13 @@ struct ReminderAgenda: Equatable {
         return title.isEmpty ? nil : title
     }
 
+    /// New reminders go to the default list if it's shown in Today, otherwise the first list that is,
+    /// so a new reminder never disappears into a hidden list.
+    static func listForNew(defaultID: String?, shown: [String]) -> String? {
+        if let defaultID, shown.contains(defaultID) { return defaultID }
+        return shown.first
+    }
+
     static func label(_ item: ReminderItem, now: Date, calendar: Calendar = .current) -> Label {
         guard let due = item.due else { return .today }
         if isOverdue(item, now: now, calendar: calendar) { return .overdue }

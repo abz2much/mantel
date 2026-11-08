@@ -62,3 +62,10 @@ private func item(_ title: String, due: Date?, hasTime: Bool = true) -> Reminder
     #expect(ReminderAgenda.newTitle(from: "   ") == nil)
     #expect(ReminderAgenda.newTitle(from: "") == nil)
 }
+
+@Test func newRemindersGoToAListYouCanSee() {
+    #expect(ReminderAgenda.listForNew(defaultID: "inbox", shown: ["inbox", "work"]) == "inbox")
+    #expect(ReminderAgenda.listForNew(defaultID: "inbox", shown: ["work", "home"]) == "work")   // default is hidden
+    #expect(ReminderAgenda.listForNew(defaultID: nil, shown: ["home"]) == "home")
+    #expect(ReminderAgenda.listForNew(defaultID: "inbox", shown: []) == nil)
+}

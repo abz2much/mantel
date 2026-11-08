@@ -10,7 +10,7 @@ struct TodayView: View {
     var onComplete: (String) -> Void = { _ in }
     /// Reminders are on and allowed: show the section (with "Add a reminder") even when nothing is due.
     var remindersOn = false
-    var onAdd: (String) -> Void = { _ in }
+    var onAdd: (String) -> Bool = { _ in true }
     /// Set while the "Add a reminder" field has the keyboard, so the panel stays open.
     var typing: Binding<Bool> = .constant(false)
     @State private var hoveredReminder: String?
@@ -69,7 +69,7 @@ struct TodayView: View {
                 .frame(width: 170)
                 .focused($fieldFocused)
                 .onSubmit {
-                    onAdd(draft)
+                    guard onAdd(draft) else { return }   // couldn't save: keep the text
                     draft = ""
                     fieldFocused = false
                 }
@@ -79,6 +79,8 @@ struct TodayView: View {
                 }
         }
         .onChange(of: fieldFocused) { _, focused in typing.wrappedValue = focused }
+        // Typing ended elsewhere (another app took the keyboard): let go of the field too.
+        .onChange(of: typing.wrappedValue) { _, isTyping in if !isTyping { fieldFocused = false } }
         .onDisappear { if typing.wrappedValue { typing.wrappedValue = false } }
     }
 

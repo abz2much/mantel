@@ -164,7 +164,9 @@ final class NotchController {
         let diff = Self.stageIDs(for: infos, current: Array(stages.keys))
         for id in diff.remove {
             // The shortcut panel was on that screen: finish it properly, so no key listener is left behind.
-            if stages[id]?.pinned == true { closeClipboard() }
+            if stages[id]?.pinned == true {
+                if pinOwner == .clipboard { closeClipboard() } else { pinOwner = nil }
+            }
             stages.removeValue(forKey: id)?.tearDown()
         }
         for info in infos where diff.add.contains(info.id) {
@@ -267,9 +269,22 @@ final class NotchController {
 
     private var pinnedStage: NotchStage? { stages.values.first { $0.pinned } }
 
+    /// What pinned the panel open: the clipboard shortcut (with its own keys), or typing a reminder.
+    private enum PinOwner { case clipboard, typing }
+    private var pinOwner: PinOwner?
+
     /// ⌃⌥V: opens the panel on the Clipboard tab on the active app's screen, or closes it if open.
     private func toggleClipboard() {
-        if pinnedStage != nil { closeClipboard(); return }
+        if pinOwner == .clipboard { closeClipboard(); return }
+        // Typing a reminder: switch the open panel to the clipboard rather than closing it.
+        if pinOwner == .typing, let stage = pinnedStage {
+            pinOwner = .clipboard
+            state.tab = .clipboard
+            state.clipboardSelection = 0
+            startKeyboard()
+            if let window = stage.presenter.window { takeKeyboard(window) }
+            return
+        }
         let infos = Self.screenInfos()
         guard let id = NotchDecision.alertScreen(screens: infos, active: ActiveScreen.current(), monitorsEnabled: monitors.enabled),
               let stage = stages[id] else { return }
@@ -277,6 +292,7 @@ final class NotchController {
         state.tab = .clipboard
         state.clipboardSelection = 0
         stage.pin()
+        pinOwner = .clipboard
         evaluate()
         // A meeting or "Time's up" has the panel; the shortcut does nothing then.
         guard stage.hoverExpanded else { stage.unpin(); state.clipboardSelection = nil; return }
@@ -297,7 +313,7 @@ final class NotchController {
     }
 
     private func handleKey(_ event: NSEvent) -> Bool {
-        guard pinnedStage != nil,
+        guard pinOwner == .clipboard,
               event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
               let key = ClipboardKeys.Key(keyCode: event.keyCode, characters: event.charactersIgnoringModifiers) else { return false }
         let items = clipboard.enabled ? clipboard.items : []
@@ -330,7 +346,8 @@ final class NotchController {
         if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
         resignObserver = nil
         state.clipboardSelection = nil
-        guard let stage = pinnedStage else { return }
+        guard pinOwner == .clipboard, let stage = pinnedStage else { return }
+        pinOwner = nil
         stage.unpin()
         // Hand the keyboard back to the app in front, so ⌘V pastes there.
         handBackKeyboard(stage)
@@ -344,15 +361,18 @@ final class NotchController {
         if let typingResign { NotificationCenter.default.removeObserver(typingResign) }
         typingResign = nil
         if typing {
-            guard let stage = stages.values.first(where: { $0.hoverExpanded && !$0.pinned }) else { return }
+            guard pinOwner == nil, let stage = stages.values.first(where: { $0.hoverExpanded && !$0.pinned }) else { return }
             stage.pin()
+            pinOwner = .typing
+            stage.presenter.window?.makeKey()   // backstop: the text field needs the keyboard
             // Clicking another app ends typing, so the panel doesn't stay pinned open.
             typingResign = NotificationCenter.default.addObserver(
                 forName: NSWindow.didResignKeyNotification, object: stage.presenter.window, queue: .main
             ) { [weak self] _ in
                 MainActor.assumeIsolated { self?.state.typing = false }
             }
-        } else if let stage = pinnedStage, keyMonitor == nil {   // not the clipboard shortcut's pin
+        } else if pinOwner == .typing, let stage = pinnedStage {
+            pinOwner = nil
             stage.unpin(stayOpenIfHovered: true)
             if !stage.hoverExpanded { handBackKeyboard(stage) }
             evaluate()
@@ -448,7 +468,14 @@ final class NotchController {
             }
         }
         // A meeting or "Time's up" took the panel: the shortcut panel is over.
-        if let pinned = pinnedStage, !pinned.hoverExpanded { closeClipboard() }
+        if let pinned = pinnedStage, !pinned.hoverExpanded {
+            if pinOwner == .clipboard {
+                closeClipboard()
+            } else {
+                pinned.unpin()
+                pinOwner = nil
+            }
+        }
     }
 
     private func perform(_ mode: NotchMode, on stage: NotchStage) async {
@@ -469,7 +496,9 @@ final class NotchController {
         case .musicExpanded, .idleExpanded:
             state.content = .panel
             await stage.presenter.expand(on: screen)
-            if stage.pinned, stage.desired == mode, let window = stage.presenter.window { takeKeyboard(window) }
+            if pinOwner == .clipboard, stage.pinned, stage.desired == mode, let window = stage.presenter.window {
+                takeKeyboard(window)
+            }
         case .meeting:
             state.content = .meeting
             await stage.presenter.expand(on: screen)
