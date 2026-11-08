@@ -1,15 +1,69 @@
 import SwiftUI
 
-/// The Today tab: what's left of today's meetings, with Join buttons.
+/// The Today tab: what's left of today's meetings, with Join buttons, then overdue and today's reminders.
 struct TodayView: View {
     let events: [MeetingEvent]
     let calendarAccess: Bool
     let onJoin: (URL) -> Void
+    /// Empty when reminders are off in Settings.
+    var reminders: [ReminderItem] = []
+    var onComplete: (String) -> Void = { _ in }
+    @State private var hoveredReminder: String?
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
-            agendaSection(Agenda.make(events, now: context.date), now: context.date)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            let now = context.date
+            // Reminders take the room of all but one "later" meeting.
+            let hasReminders = !ReminderAgenda.make(reminders, now: now, max: 1).shown.isEmpty
+            let agenda = Agenda.make(events, now: now, maxLater: hasReminders ? 1 : Agenda.maxLater)
+            let meetingRows = (agenda.current == nil ? 0 : 1) + (agenda.next == nil ? 0 : 1) + agenda.later.count
+                + (agenda.moreCount > 0 ? 1 : 0)
+            // Keep within the panel's fixed height: fewer reminders when the meetings list is full.
+            let due = ReminderAgenda.make(reminders, now: now, max: meetingRows == 0 ? 5 : meetingRows >= 4 ? 2 : 3)
+            VStack(alignment: .leading, spacing: 10) {
+                if hasReminders, calendarAccess, meetingRows == 0 {
+                    Label("No more meetings today", systemImage: "checkmark.circle")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    agendaSection(agenda, now: now)
+                }
+                if hasReminders { remindersSection(due, now: now) }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    // MARK: Reminders
+
+    private func remindersSection(_ due: ReminderAgenda, now: Date) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("REMINDERS").font(.system(size: 9, weight: .bold)).tracking(1).foregroundStyle(.secondary)
+            ForEach(due.shown) { reminderRow($0, now: now) }
+            if due.moreCount > 0 {
+                Text("+\(due.moreCount) more").font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func reminderRow(_ item: ReminderItem, now: Date) -> some View {
+        let colour = item.listColor.map(Color.init) ?? .white.opacity(0.5)
+        let hovered = hoveredReminder == item.id
+        return HStack(spacing: 8) {
+            Button { onComplete(item.id) } label: {
+                Image(systemName: hovered ? "checkmark.circle" : "circle")
+                    .font(.system(size: 12))
+                    .foregroundStyle(colour)
+            }
+            .buttonStyle(.plain)
+            .onHover { hoveredReminder = $0 ? item.id : (hoveredReminder == item.id ? nil : hoveredReminder) }
+            .help("Mark as done")
+            Text(item.title).font(.caption).lineLimit(1)
+            Spacer(minLength: 8)
+            switch ReminderAgenda.label(item, now: now) {
+            case .overdue: Text("Overdue").font(.caption2.weight(.semibold)).foregroundStyle(.orange)
+            case .today: Text("Today").font(.caption2).foregroundStyle(.secondary)
+            case .time(let date): Text(Self.time(date)).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+            }
         }
     }
 

@@ -189,6 +189,7 @@ struct NotchRootView: View {
     @ObservedObject var state: NotchState
     @ObservedObject var music: MusicService
     @ObservedObject var calendar: CalendarService
+    @ObservedObject var reminders: RemindersService
     @ObservedObject var clipboard: ClipboardService
     @ObservedObject var timer: TimerService
     let onJoin: (URL) -> Void
@@ -199,7 +200,7 @@ struct NotchRootView: View {
         case .meeting where state.event != nil:
             NotchView(state: state, onJoin: onJoin, onDismiss: onDismiss)
         case .panel:
-            HoverPanelView(state: state, music: music, calendar: calendar, clipboard: clipboard, timer: timer, onJoin: onJoin)
+            HoverPanelView(state: state, music: music, calendar: calendar, reminders: reminders, clipboard: clipboard, timer: timer, onJoin: onJoin)
         case .timerDone:
             TimerDoneView(timer: timer)
         default:

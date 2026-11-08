@@ -35,6 +35,7 @@ final class NotchController {
     private typealias MonitorPresenter = NotchPresenter<NotchRootView, MonitorTabView, EmptyView>
 
     private let calendar: CalendarService
+    private let reminders: RemindersService
     private let music: MusicService
     private let battery: BatteryService
     private let clipboard: ClipboardService
@@ -58,9 +59,10 @@ final class NotchController {
     private var keyMonitor: Any?
     private var resignObserver: NSObjectProtocol?
 
-    init(calendar: CalendarService, music: MusicService, battery: BatteryService, clipboard: ClipboardService, timer: TimerService,
+    init(calendar: CalendarService, reminders: RemindersService, music: MusicService, battery: BatteryService, clipboard: ClipboardService, timer: TimerService,
          monitors: MonitorSettings) {
         self.calendar = calendar
+        self.reminders = reminders
         self.music = music
         self.battery = battery
         self.clipboard = clipboard
@@ -187,6 +189,7 @@ final class NotchController {
             state: state,
             music: music,
             calendar: calendar,
+            reminders: reminders,
             clipboard: clipboard,
             timer: timerService,
             onJoin: { [weak self] url in

@@ -1,7 +1,7 @@
 import Foundation
 
 /// An incomplete Apple Reminders item, reduced to what the Today tab shows.
-struct ReminderItem: Equatable, Identifiable {
+struct ReminderItem: Equatable, Identifiable, Sendable {
     let id: String
     let title: String
     let due: Date?
