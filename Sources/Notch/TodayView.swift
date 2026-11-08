@@ -25,10 +25,8 @@ struct TodayView: View {
             let agenda = Agenda.make(events, now: now, maxLater: hasReminders ? 1 : Agenda.maxLater)
             let meetingRows = (agenda.current == nil ? 0 : 1) + (agenda.next == nil ? 0 : 1) + agenda.later.count
                 + (agenda.moreCount > 0 ? 1 : 0)
-            // Keep within the panel's fixed height: fewer reminders when the meetings list is full,
-            // and one fewer to leave room for "Add a reminder".
-            let room = (meetingRows == 0 ? 5 : meetingRows >= 4 ? 2 : 3) - (remindersOn ? 1 : 0)
-            let due = ReminderAgenda.make(reminders, now: now, max: max(1, room))
+            // Keep within the panel's fixed height: fewer reminders when the meetings list is full.
+            let due = ReminderAgenda.make(reminders, now: now, max: meetingRows == 0 ? 5 : meetingRows >= 3 ? 2 : 3)
             VStack(alignment: .leading, spacing: 10) {
                 if hasReminders, calendarAccess, meetingRows == 0 {
                     Label("No more meetings today", systemImage: "checkmark.circle")
@@ -46,24 +44,29 @@ struct TodayView: View {
 
     private func remindersSection(_ due: ReminderAgenda, now: Date) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("REMINDERS").font(.system(size: 9, weight: .bold)).tracking(1).foregroundStyle(.secondary)
+            // "Add a reminder" sits in the heading row, so a full list can never push it out of sight.
+            HStack(spacing: 8) {
+                Text("REMINDERS").font(.system(size: 9, weight: .bold)).tracking(1).foregroundStyle(.secondary)
+                Spacer(minLength: 8)
+                if remindersOn { addField }
+            }
             ForEach(due.shown) { reminderRow($0, now: now) }
             if due.moreCount > 0 {
                 Text("+\(due.moreCount) more").font(.caption2).foregroundStyle(.secondary)
             }
-            if remindersOn { addField }
         }
     }
 
     /// Type and press Return to add a reminder due today; Esc cancels.
     private var addField: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 4) {
             Image(systemName: "plus.circle")
-                .font(.system(size: 12))
+                .font(.system(size: 11))
                 .foregroundStyle(MantelStyle.amber)
             TextField("Add a reminder", text: $draft)
                 .textFieldStyle(.plain)
                 .font(.caption)
+                .frame(width: 170)
                 .focused($fieldFocused)
                 .onSubmit {
                     onAdd(draft)

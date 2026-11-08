@@ -67,6 +67,8 @@ struct Screenshots {
                    reminder("Call the dentist", in: 45, colour: personal),
                    reminder("Book train tickets", in: 200, colour: orange)]
         try save(notchShape(panel(.today, events: events, reminders: due)), as: "today-reminders.png")
+        // Three meeting rows (no "+more" line): the tightest fit with reminders.
+        try save(notchShape(panel(.today, events: Array(events.prefix(3)), reminders: due)), as: "today-reminders-3.png")
     }
 
     @Test func clipboard() throws {
