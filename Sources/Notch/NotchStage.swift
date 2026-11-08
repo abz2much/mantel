@@ -36,6 +36,8 @@ final class NotchStage {
     private(set) var applied: NotchMode = .hidden
     var hoverExpanded = false
     private(set) var pointerInside = false
+    /// Opened from the keyboard: stays open until closed on purpose, wherever the pointer goes.
+    private(set) var pinned = false
 
     private var reconciling = false
     private var hoverTimer: Timer?
@@ -74,15 +76,28 @@ final class NotchStage {
         hoverTimer = nil
         if inside {
             startDwell()
-        } else if hoverExpanded {
+        } else if hoverExpanded, !pinned {
             hoverTimer = Timer.scheduledTimer(withTimeInterval: Self.hoverLeaveDelay, repeats: false) { [weak self] _ in
                 MainActor.assumeIsolated {
-                    guard let self, !self.pointerInside, self.hoverExpanded else { return }
+                    guard let self, !self.pointerInside, self.hoverExpanded, !self.pinned else { return }
                     self.hoverExpanded = false
                     self.onHoverExpandedChange(false)
                 }
             }
         }
+    }
+
+    /// Opens the panel from the keyboard, ignoring the pointer until `unpin()`.
+    func pin() {
+        hoverTimer?.invalidate()
+        hoverTimer = nil
+        pinned = true
+        hoverExpanded = true
+    }
+
+    func unpin() {
+        pinned = false
+        hoverExpanded = false
     }
 
     /// The screen went away: stop timers and close the window now.

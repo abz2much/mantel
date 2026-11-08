@@ -88,3 +88,18 @@ private let insideZone = CGPoint(x: zone.midX, y: zone.midY)
     try await Task.sleep(for: .milliseconds(400))
     #expect(changes.isEmpty)
 }
+
+@MainActor
+@Test func pinnedPanelIgnoresThePointerLeaving() async throws {
+    let stage = NotchStage(screenID: 2, presenter: FakePresenter(), onHoverExpandedChange: { _ in })
+    stage.pin()
+    #expect(stage.hoverExpanded)
+    #expect(stage.pinned)
+    stage.pointerMoved(to: insideZone, zone: zone)
+    stage.pointerMoved(to: CGPoint(x: 0, y: 0), zone: zone)
+    try await Task.sleep(for: .milliseconds(700))
+    #expect(stage.hoverExpanded)
+    stage.unpin()
+    #expect(!stage.hoverExpanded)
+    #expect(!stage.pinned)
+}
