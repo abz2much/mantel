@@ -26,7 +26,9 @@ enum ClipboardKeys {
         case pass
     }
 
-    static func handle(_ key: Key, selection: Int, count: Int) -> Result {
+    /// On another tab (switched with the mouse), only Esc still works, so keys never copy a hidden item.
+    static func handle(_ key: Key, selection: Int, count: Int, onClipboardTab: Bool = true) -> Result {
+        guard onClipboardTab else { return key == .escape ? .close : .pass }
         switch key {
         case .escape: return .close
         case .enter: return count > 0 ? .copy(min(max(selection, 0), count - 1)) : .close

@@ -43,3 +43,10 @@ private func press(_ key: ClipboardKeys.Key, selection: Int = 0, count: Int = 5)
     #expect(ClipboardKeys.Key(keyCode: 0, characters: "a") == nil)
     #expect(ClipboardKeys.Key(keyCode: 29, characters: "0") == nil)   // 0 isn't an item number
 }
+
+@Test func onAnotherTabOnlyEscapeWorks() {
+    #expect(ClipboardKeys.handle(.enter, selection: 0, count: 5, onClipboardTab: false) == .pass)
+    #expect(ClipboardKeys.handle(.digit(1), selection: 0, count: 5, onClipboardTab: false) == .pass)
+    #expect(ClipboardKeys.handle(.down, selection: 0, count: 5, onClipboardTab: false) == .pass)
+    #expect(ClipboardKeys.handle(.escape, selection: 0, count: 5, onClipboardTab: false) == .close)
+}

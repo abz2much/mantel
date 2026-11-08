@@ -21,9 +21,11 @@ final class GlobalHotKey {
     }
 
     var isRegistered: Bool { hotKey != nil }
+    var hasHandler: Bool { handler != nil }
 
+    /// Does nothing if already registered. If another app owns the shortcut, nothing is left installed.
     func register() {
-        guard hotKey == nil else { return }
+        guard hotKey == nil, handler == nil else { return }
         var type = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
         let me = Unmanaged.passUnretained(self).toOpaque()
         InstallEventHandler(GetApplicationEventTarget(), { _, _, userData in
@@ -33,7 +35,12 @@ final class GlobalHotKey {
             return noErr
         }, 1, &type, me, &handler)
         let id = EventHotKeyID(signature: OSType(0x4D4E544C), id: 1)   // "MNTL"
-        RegisterEventHotKey(keyCode, modifiers, id, GetApplicationEventTarget(), 0, &hotKey)
+        let status = RegisterEventHotKey(keyCode, modifiers, id, GetApplicationEventTarget(), 0, &hotKey)
+        if status != noErr {
+            hotKey = nil
+            if let handler { RemoveEventHandler(handler) }
+            handler = nil
+        }
     }
 
     func unregister() {

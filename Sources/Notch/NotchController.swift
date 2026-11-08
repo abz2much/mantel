@@ -149,6 +149,8 @@ final class NotchController {
         let infos = Self.screenInfos()
         let diff = Self.stageIDs(for: infos, current: Array(stages.keys))
         for id in diff.remove {
+            // The shortcut panel was on that screen: finish it properly, so no key listener is left behind.
+            if stages[id]?.pinned == true { closeClipboard() }
             stages.removeValue(forKey: id)?.tearDown()
         }
         for info in infos where diff.add.contains(info.id) {
@@ -268,7 +270,8 @@ final class NotchController {
               event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
               let key = ClipboardKeys.Key(keyCode: event.keyCode, characters: event.charactersIgnoringModifiers) else { return false }
         let items = clipboard.enabled ? clipboard.items : []
-        switch ClipboardKeys.handle(key, selection: state.clipboardSelection ?? 0, count: items.count) {
+        switch ClipboardKeys.handle(key, selection: state.clipboardSelection ?? 0, count: items.count,
+                                    onClipboardTab: state.tab == .clipboard) {
         case .select(let row): state.clipboardSelection = row
         case .copy(let row):
             clipboard.copy(items[row])

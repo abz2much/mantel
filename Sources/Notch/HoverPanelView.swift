@@ -113,6 +113,10 @@ struct ClipboardListView: View {
                             .onChange(of: selection) { _, row in
                                 if let row { withAnimation(.snappy) { proxy.scrollTo(row) } }
                             }
+                            .onAppear {
+                                // Opened with ⌃⌥V: start at the top, whatever an earlier hover scrolled to.
+                                if let selection { proxy.scrollTo(selection) }
+                            }
                     }
                 } else {
                     rows
