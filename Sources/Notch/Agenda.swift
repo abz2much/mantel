@@ -5,7 +5,7 @@ struct Agenda: Equatable {
     /// A meeting in progress.
     var current: MeetingEvent?
     var next: MeetingEvent?
-    /// Meetings after `next`, capped at `maxLater`.
+    /// Meetings after `next`, capped at `maxLater` (fewer when reminders need the room).
     var later: [MeetingEvent] = []
     /// How many more meetings today beyond `later`.
     var moreCount = 0
@@ -13,7 +13,8 @@ struct Agenda: Equatable {
     static let maxLater = 3
 
     /// `events` must be sorted by start time.
-    static func make(_ events: [MeetingEvent], now: Date, calendar: Calendar = .current) -> Agenda {
+    static func make(_ events: [MeetingEvent], now: Date, maxLater: Int = Agenda.maxLater,
+                     calendar: Calendar = .current) -> Agenda {
         guard let midnight = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) else { return Agenda() }
         let today = events.filter { !$0.isDeclined && $0.end > now && $0.start < midnight }
         let upcoming = today.filter { $0.start > now }

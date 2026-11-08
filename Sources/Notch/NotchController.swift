@@ -19,6 +19,8 @@ final class NotchState: ObservableObject {
     /// The battery flash showing in the compact notch, if any, and when it started.
     @Published var battery: BatteryAlert?
     @Published var batteryShownAt: Date?
+    /// True while typing a new reminder: the panel stays open until done.
+    @Published var typing = false
     /// The highlighted clipboard row while the panel was opened with ⌃⌥V; nil otherwise.
     @Published var clipboardSelection: Int?
 }
@@ -35,6 +37,7 @@ final class NotchController {
     private typealias MonitorPresenter = NotchPresenter<NotchRootView, MonitorTabView, EmptyView>
 
     private let calendar: CalendarService
+    private let reminders: RemindersService
     private let music: MusicService
     private let battery: BatteryService
     private let clipboard: ClipboardService
@@ -55,12 +58,15 @@ final class NotchController {
     private var hotKey: GlobalHotKey?
     private var registeredShortcut: Shortcut?
     private var clipboardCancellable: AnyCancellable?
+    private var typingCancellable: AnyCancellable?
+    private var typingResign: NSObjectProtocol?
     private var keyMonitor: Any?
     private var resignObserver: NSObjectProtocol?
 
-    init(calendar: CalendarService, music: MusicService, battery: BatteryService, clipboard: ClipboardService, timer: TimerService,
+    init(calendar: CalendarService, reminders: RemindersService, music: MusicService, battery: BatteryService, clipboard: ClipboardService, timer: TimerService,
          monitors: MonitorSettings) {
         self.calendar = calendar
+        self.reminders = reminders
         self.music = music
         self.battery = battery
         self.clipboard = clipboard
@@ -110,6 +116,14 @@ final class NotchController {
                 MainActor.assumeIsolated { self?.updateHotKey() }
             }
 
+        // Typing a reminder keeps the panel open; finishing hands the keyboard back.
+        typingCancellable = state.$typing
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] typing in
+                MainActor.assumeIsolated { self?.typingChanged(typing) }
+            }
+
         // Hover and click-through follow the pointer position.
         pointer = PointerWatcher { [weak self] point in self?.pointerMoved(point) }
         pointer?.start()
@@ -150,7 +164,9 @@ final class NotchController {
         let diff = Self.stageIDs(for: infos, current: Array(stages.keys))
         for id in diff.remove {
             // The shortcut panel was on that screen: finish it properly, so no key listener is left behind.
-            if stages[id]?.pinned == true { closeClipboard() }
+            if stages[id]?.pinned == true {
+                if pinOwner == .clipboard { closeClipboard() } else { pinOwner = nil }
+            }
             stages.removeValue(forKey: id)?.tearDown()
         }
         for info in infos where diff.add.contains(info.id) {
@@ -187,6 +203,7 @@ final class NotchController {
             state: state,
             music: music,
             calendar: calendar,
+            reminders: reminders,
             clipboard: clipboard,
             timer: timerService,
             onJoin: { [weak self] url in
@@ -252,9 +269,22 @@ final class NotchController {
 
     private var pinnedStage: NotchStage? { stages.values.first { $0.pinned } }
 
+    /// What pinned the panel open: the clipboard shortcut (with its own keys), or typing a reminder.
+    private enum PinOwner { case clipboard, typing }
+    private var pinOwner: PinOwner?
+
     /// ⌃⌥V: opens the panel on the Clipboard tab on the active app's screen, or closes it if open.
     private func toggleClipboard() {
-        if pinnedStage != nil { closeClipboard(); return }
+        if pinOwner == .clipboard { closeClipboard(); return }
+        // Typing a reminder: switch the open panel to the clipboard rather than closing it.
+        if pinOwner == .typing, let stage = pinnedStage {
+            pinOwner = .clipboard
+            state.tab = .clipboard
+            state.clipboardSelection = 0
+            startKeyboard()
+            if let window = stage.presenter.window { takeKeyboard(window) }
+            return
+        }
         let infos = Self.screenInfos()
         guard let id = NotchDecision.alertScreen(screens: infos, active: ActiveScreen.current(), monitorsEnabled: monitors.enabled),
               let stage = stages[id] else { return }
@@ -262,6 +292,7 @@ final class NotchController {
         state.tab = .clipboard
         state.clipboardSelection = 0
         stage.pin()
+        pinOwner = .clipboard
         evaluate()
         // A meeting or "Time's up" has the panel; the shortcut does nothing then.
         guard stage.hoverExpanded else { stage.unpin(); state.clipboardSelection = nil; return }
@@ -282,7 +313,7 @@ final class NotchController {
     }
 
     private func handleKey(_ event: NSEvent) -> Bool {
-        guard pinnedStage != nil,
+        guard pinOwner == .clipboard,
               event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
               let key = ClipboardKeys.Key(keyCode: event.keyCode, characters: event.charactersIgnoringModifiers) else { return false }
         let items = clipboard.enabled ? clipboard.items : []
@@ -315,15 +346,45 @@ final class NotchController {
         if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
         resignObserver = nil
         state.clipboardSelection = nil
-        guard let stage = pinnedStage else { return }
+        guard pinOwner == .clipboard, let stage = pinnedStage else { return }
+        pinOwner = nil
         stage.unpin()
         // Hand the keyboard back to the app in front, so ⌘V pastes there.
+        handBackKeyboard(stage)
+        evaluate()
+        stage.recheckHover()
+    }
+
+    // MARK: Typing a reminder
+
+    private func typingChanged(_ typing: Bool) {
+        if let typingResign { NotificationCenter.default.removeObserver(typingResign) }
+        typingResign = nil
+        if typing {
+            guard pinOwner == nil, let stage = stages.values.first(where: { $0.hoverExpanded && !$0.pinned }) else { return }
+            stage.pin()
+            pinOwner = .typing
+            stage.presenter.window?.makeKey()   // backstop: the text field needs the keyboard
+            // Clicking another app ends typing, so the panel doesn't stay pinned open.
+            typingResign = NotificationCenter.default.addObserver(
+                forName: NSWindow.didResignKeyNotification, object: stage.presenter.window, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.state.typing = false }
+            }
+        } else if pinOwner == .typing, let stage = pinnedStage {
+            pinOwner = nil
+            stage.unpin(stayOpenIfHovered: true)
+            if !stage.hoverExpanded { handBackKeyboard(stage) }
+            evaluate()
+        }
+    }
+
+    /// Lets the app in front have the keyboard again, so ⌘V and typing go there.
+    private func handBackKeyboard(_ stage: NotchStage) {
         if let window = stage.presenter.window, window.isKeyWindow {
             window.orderOut(nil)
             window.orderFrontRegardless()
         }
-        evaluate()
-        stage.recheckHover()
     }
 
     // MARK: Battery
@@ -407,7 +468,14 @@ final class NotchController {
             }
         }
         // A meeting or "Time's up" took the panel: the shortcut panel is over.
-        if let pinned = pinnedStage, !pinned.hoverExpanded { closeClipboard() }
+        if let pinned = pinnedStage, !pinned.hoverExpanded {
+            if pinOwner == .clipboard {
+                closeClipboard()
+            } else {
+                pinned.unpin()
+                pinOwner = nil
+            }
+        }
     }
 
     private func perform(_ mode: NotchMode, on stage: NotchStage) async {
@@ -418,14 +486,19 @@ final class NotchController {
         guard let screen = Self.screen(for: stage.screenID) else { return }
         switch mode {
         case .hidden: await stage.presenter.hide()
-        case .musicCompact, .idle, .tab: await stage.presenter.compact(on: screen)
+        case .musicCompact, .idle, .tab:
+            await stage.presenter.compact(on: screen)
+            // The panel closed while it had the keyboard (after typing): give it back.
+            if !stage.pinned, stage.presenter.window?.isKeyWindow == true { handBackKeyboard(stage) }
         case .battery:
             await stage.presenter.compact(on: screen)
             if stage.desired == .battery { startFlashClock() }
         case .musicExpanded, .idleExpanded:
             state.content = .panel
             await stage.presenter.expand(on: screen)
-            if stage.pinned, stage.desired == mode, let window = stage.presenter.window { takeKeyboard(window) }
+            if pinOwner == .clipboard, stage.pinned, stage.desired == mode, let window = stage.presenter.window {
+                takeKeyboard(window)
+            }
         case .meeting:
             state.content = .meeting
             await stage.presenter.expand(on: screen)

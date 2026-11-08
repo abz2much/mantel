@@ -15,6 +15,8 @@
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSCalendarsFullAccessUsageDescription</key>
     <string>Mantel reads your calendar events (read-only) to show a reminder before meetings.</string>
+    <key>NSRemindersFullAccessUsageDescription</key>
+    <string>Mantel shows today's and overdue reminders in its Today tab, and marks one done when you tick it.</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>Mantel controls Spotify and Apple Music (play/pause, next, previous, seek) and reads the current track to show it in the notch.</string>
 </dict>

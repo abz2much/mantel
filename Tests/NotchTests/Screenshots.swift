@@ -58,6 +58,17 @@ struct Screenshots {
         ]
         let view = panel(.today, events: events)
         try save(notchShape(view), as: "idle-panel.png")
+
+        func reminder(_ title: String, in minutes: Double, colour: RGB) -> ReminderItem {
+            ReminderItem(id: title, title: title, due: Date().addingTimeInterval(minutes * 60), hasTime: true, listColor: colour)
+        }
+        let orange = RGB(r: 1, g: 0.6, b: 0.2)
+        let due = [reminder("Send the invoice", in: -90, colour: orange),
+                   reminder("Call the dentist", in: 45, colour: personal),
+                   reminder("Book train tickets", in: 200, colour: orange)]
+        try save(notchShape(panel(.today, events: events, reminders: due)), as: "today-reminders.png")
+        // Three meeting rows (no "+more" line): the tightest fit with reminders.
+        try save(notchShape(panel(.today, events: Array(events.prefix(3)), reminders: due)), as: "today-reminders-3.png")
     }
 
     @Test func clipboard() throws {
@@ -83,7 +94,7 @@ struct Screenshots {
     @Test func musicTab() throws {
         let state = NotchState()
         state.tab = .music
-        let view = HoverPanelView(state: state, music: playingMusic(), calendar: CalendarService(),
+        let view = HoverPanelView(state: state, music: playingMusic(), calendar: CalendarService(), reminders: RemindersService(),
                                   clipboard: ClipboardService(), timer: TimerService(), onJoin: { _ in })
         try save(notchShape(view), as: "music-tab.png")
     }
@@ -93,7 +104,7 @@ struct Screenshots {
         state.tab = .timer
         let timer = TimerService()
         func panel() -> some View {
-            HoverPanelView(state: state, music: MusicService(), calendar: CalendarService(),
+            HoverPanelView(state: state, music: MusicService(), calendar: CalendarService(), reminders: RemindersService(),
                            clipboard: ClipboardService(), timer: timer, onJoin: { _ in })
         }
         try save(notchShape(panel()), as: "timer-start.png")
@@ -110,10 +121,11 @@ struct Screenshots {
     }
 
     /// The hover panel on one tab, with calendar data that doesn't come from the real calendar.
-    private func panel(_ tab: HoverTab, events: [MeetingEvent]) -> some View {
+    private func panel(_ tab: HoverTab, events: [MeetingEvent], reminders: [ReminderItem] = []) -> some View {
         VStack(spacing: 8) {
             tabs(selected: tab == .today ? "Today" : "Music")
-            TodayView(events: events, calendarAccess: true, onJoin: { _ in })
+            TodayView(events: events, calendarAccess: true, onJoin: { _ in }, reminders: reminders,
+                      remindersOn: !reminders.isEmpty)
                 .frame(height: HoverPanelView.contentHeight, alignment: .top)
         }
         .padding(.horizontal, 12).padding(.top, 4).padding(.bottom, 8)
@@ -125,7 +137,7 @@ struct Screenshots {
     /// A stand-in for the panel's tab bar (the real one needs live services).
     private func tabs(selected: String) -> some View {
         HStack(spacing: 4) {
-            ForEach([("Music", "music.note"), ("Clipboard", "doc.on.clipboard"), ("Today", "calendar"), ("Timer", "timer")], id: \.0) { title, icon in
+            ForEach(HoverTab.allCases.map { ($0.title, $0.icon) }, id: \.0) { title, icon in
                 Label(title, systemImage: icon)
                     .font(.system(size: 11, weight: .medium))
                     .padding(.horizontal, 10).padding(.vertical, 4)

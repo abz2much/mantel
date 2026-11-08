@@ -6,6 +6,7 @@ struct HoverPanelView: View {
     @ObservedObject var state: NotchState
     @ObservedObject var music: MusicService
     @ObservedObject var calendar: CalendarService
+    @ObservedObject var reminders: RemindersService
     @ObservedObject var clipboard: ClipboardService
     @ObservedObject var timer: TimerService
     let onJoin: (URL) -> Void
@@ -22,7 +23,12 @@ struct HoverPanelView: View {
                 case .music: musicTab
                 case .clipboard: ClipboardListView(items: clipboard.items, enabled: clipboard.enabled, onCopy: clipboard.copy,
                                                    selection: state.clipboardSelection)
-                case .today: TodayView(events: calendar.events, calendarAccess: calendar.hasAccess, onJoin: onJoin)
+                case .today: TodayView(events: calendar.events, calendarAccess: calendar.hasAccess, onJoin: onJoin,
+                                       reminders: reminders.enabled && reminders.hasAccess ? reminders.items : [],
+                                       onComplete: reminders.complete,
+                                       remindersOn: reminders.enabled && reminders.hasAccess,
+                                       onAdd: reminders.add,
+                                       typing: $state.typing)
                 case .timer: TimerTabView(timer: timer)
                 }
             }
@@ -45,10 +51,7 @@ struct HoverPanelView: View {
 
     private var tabBar: some View {
         HStack(spacing: 4) {
-            tabButton(.music, "Music", "music.note")
-            tabButton(.clipboard, "Clipboard", "doc.on.clipboard")
-            tabButton(.today, "Today", "calendar")
-            tabButton(.timer, "Timer", "timer")
+            ForEach(HoverTab.allCases, id: \.self) { tabButton($0, $0.title, $0.icon) }
             Spacer()
         }
     }

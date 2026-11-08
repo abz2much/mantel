@@ -4,6 +4,7 @@ import SwiftUI
 /// The Settings window (⌘,): General, Features and Calendars.
 struct SettingsView: View {
     @ObservedObject var calendar: CalendarService
+    @ObservedObject var reminders: RemindersService
     @ObservedObject var music: MusicService
     @ObservedObject var battery: BatteryService
     @ObservedObject var clipboard: ClipboardService
@@ -113,6 +114,25 @@ struct SettingsView: View {
                     }
                 }
             }
+            Section("Reminders") {
+                Toggle("Show reminders in Today", isOn: $reminders.enabled)
+                Text("Overdue and today's reminders appear under your meetings. Tick one to mark it done.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            if reminders.enabled, reminders.asked, !reminders.hasAccess {
+                approvalRow("Mantel can't read your reminders.", button: "Open Privacy Settings…") {
+                    SystemSettings.open(.reminders)
+                }
+            } else if reminders.enabled, reminders.hasAccess {
+                Section("Show reminders from") {
+                    ForEach(reminders.lists, id: \.calendarIdentifier) { list in
+                        Toggle("\(list.title) (\(list.source.title))", isOn: Binding(
+                            get: { reminders.isSelected(listID: list.calendarIdentifier) },
+                            set: { reminders.setSelected($0, listID: list.calendarIdentifier) }
+                        ))
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
     }
@@ -149,11 +169,12 @@ enum UpdateStatusText {
 }
 
 enum SystemSettings {
-    enum Pane { case calendars, automation }
+    enum Pane { case calendars, reminders, automation }
 
     static func open(_ pane: Pane) {
         let anchor = switch pane {
         case .calendars: "Privacy_Calendars"
+        case .reminders: "Privacy_Reminders"
         case .automation: "Privacy_Automation"
         }
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(anchor)") {

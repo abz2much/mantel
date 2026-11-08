@@ -13,3 +13,8 @@ import Testing
 @Test func firstTimeOpensTodayWhenNothingIsLoaded() {
     #expect(HoverTab.opening(last: nil, hasTrack: false) == .today)
 }
+
+@Test func tabsAreInTheChosenOrder() {
+    #expect(HoverTab.allCases == [.today, .clipboard, .timer, .music])
+    #expect(HoverTab.allCases.map(\.title) == ["Today", "Clipboard", "Timer", "Music"])
+}

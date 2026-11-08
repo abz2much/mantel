@@ -4,6 +4,7 @@ import SwiftUI
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let calendar = CalendarService()
+    let reminders = RemindersService()
     let music = MusicService()
     let battery = BatteryService()
     let clipboard = ClipboardService()
@@ -11,7 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let timer = TimerService()
     let loginItem = LoginItemService()
     let monitors = MonitorSettings()
-    private(set) lazy var controller = NotchController(calendar: calendar, music: music, battery: battery,
+    private(set) lazy var controller = NotchController(calendar: calendar, reminders: reminders, music: music, battery: battery,
                                                        clipboard: clipboard, timer: timer, monitors: monitors)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -21,7 +22,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         clipboard.start()
         updates.start()
         loginItem.start()
-        Task { await calendar.start() }
+        Task {
+            await calendar.start()
+            await reminders.start()   // only asks for access if reminders were turned on in Settings
+        }
     }
 }
 
@@ -38,7 +42,7 @@ struct NotchApp: App {
         .menuBarExtraStyle(.menu)
 
         Settings {
-            SettingsView(calendar: delegate.calendar, music: delegate.music, battery: delegate.battery,
+            SettingsView(calendar: delegate.calendar, reminders: delegate.reminders, music: delegate.music, battery: delegate.battery,
                          clipboard: delegate.clipboard, updates: delegate.updates, loginItem: delegate.loginItem,
                          monitors: delegate.monitors)
         }

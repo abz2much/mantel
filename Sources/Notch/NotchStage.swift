@@ -95,9 +95,10 @@ final class NotchStage {
         hoverExpanded = true
     }
 
-    func unpin() {
+    /// `stayOpenIfHovered`: after typing, keep the panel open if the pointer is still on it.
+    func unpin(stayOpenIfHovered: Bool = false) {
         pinned = false
-        hoverExpanded = false
+        hoverExpanded = stayOpenIfHovered && pointerInside
     }
 
     /// The screen went away: stop timers and close the window now.
