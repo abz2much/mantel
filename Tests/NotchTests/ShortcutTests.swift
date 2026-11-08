@@ -18,7 +18,7 @@ import Testing
 }
 
 @Test func needsControlOptionOrCommand() {
-    #expect(Shortcut(keyCode: UInt16(kVK_ANSI_V), modifiers: [.command]).isAllowed)
+    #expect(Shortcut(keyCode: UInt16(kVK_ANSI_V), modifiers: [.option]).isAllowed)
     #expect(!Shortcut(keyCode: UInt16(kVK_ANSI_V), modifiers: []).isAllowed)
     #expect(!Shortcut(keyCode: UInt16(kVK_ANSI_V), modifiers: [.shift]).isAllowed)
     #expect(!Shortcut(keyCode: UInt16(kVK_Escape), modifiers: [.command]).isAllowed)   // Esc cancels recording
@@ -41,7 +41,25 @@ import Testing
     let board = NSPasteboard(name: .init("test.\(UUID())"))
     let service = ClipboardService(pasteboard: board, defaults: defaults)
     #expect(service.shortcut == .default)
-    service.shortcut = Shortcut(keyCode: UInt16(kVK_ANSI_C), modifiers: [.command, .shift])
+    service.shortcut = Shortcut(keyCode: UInt16(kVK_ANSI_C), modifiers: [.control, .shift])
     let again = ClipboardService(pasteboard: board, defaults: defaults)
-    #expect(again.shortcut == Shortcut(keyCode: UInt16(kVK_ANSI_C), modifiers: [.command, .shift]))
+    #expect(again.shortcut == Shortcut(keyCode: UInt16(kVK_ANSI_C), modifiers: [.control, .shift]))
+}
+
+@Test func commandAloneNeedsAnFKey() {
+    // ⌘ or ⌘⇧ with a normal key would override app shortcuts like ⌘V and ⌘Q everywhere.
+    #expect(!Shortcut(keyCode: UInt16(kVK_ANSI_V), modifiers: [.command]).isAllowed)
+    #expect(!Shortcut(keyCode: UInt16(kVK_ANSI_C), modifiers: [.control, .shift]).isAllowed)
+    #expect(!Shortcut(keyCode: UInt16(kVK_Tab), modifiers: [.command]).isAllowed)
+    #expect(Shortcut(keyCode: UInt16(kVK_F5), modifiers: [.command]).isAllowed)
+    #expect(Shortcut(keyCode: UInt16(kVK_ANSI_V), modifiers: [.command, .option]).isAllowed)
+    #expect(Shortcut(keyCode: UInt16(kVK_ANSI_V), modifiers: [.control, .shift]).isAllowed)
+}
+
+@MainActor
+@Test func aSavedShortcutThatIsntAllowedFallsBackToDefault() throws {
+    let defaults = UserDefaults(suiteName: "test.\(UUID())")!
+    defaults.set(try JSONEncoder().encode(Shortcut(keyCode: UInt16(kVK_ANSI_A), modifiers: [])), forKey: "clipboardShortcutKeys")
+    let service = ClipboardService(pasteboard: NSPasteboard(name: .init("test.\(UUID())")), defaults: defaults)
+    #expect(service.shortcut == .default)
 }

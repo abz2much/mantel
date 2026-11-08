@@ -20,6 +20,14 @@ final class GlobalHotKey {
     }
 
     var isRegistered: Bool { hotKey != nil }
+
+    /// Whether `shortcut` can be registered right now (no other app owns it). Leaves nothing registered.
+    static func isAvailable(_ shortcut: Shortcut) -> Bool {
+        let probe = GlobalHotKey(shortcut) {}
+        probe.register()
+        defer { probe.unregister() }
+        return probe.isRegistered
+    }
     var hasHandler: Bool { handler != nil }
 
     /// Does nothing if already registered. If another app owns the shortcut, nothing is left installed.

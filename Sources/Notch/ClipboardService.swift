@@ -46,7 +46,10 @@ final class ClipboardService: ObservableObject {
         self.defaults = defaults
         enabled = defaults.object(forKey: Self.enabledKey) as? Bool ?? true
         shortcutEnabled = defaults.object(forKey: Self.shortcutKey) as? Bool ?? true
-        shortcut = (defaults.data(forKey: Self.shortcutKeysKey)).flatMap { try? JSONDecoder().decode(Shortcut.self, from: $0) }
+        // A saved shortcut that isn't allowed (damaged or from an older rule) falls back to ⌃⌥V.
+        shortcut = (defaults.data(forKey: Self.shortcutKeysKey))
+            .flatMap { try? JSONDecoder().decode(Shortcut.self, from: $0) }
+            .flatMap { $0.isAllowed ? $0 : nil }
             ?? .default
         // Whatever was on the clipboard before Mantel started isn't recorded.
         lastChangeCount = pasteboard.changeCount

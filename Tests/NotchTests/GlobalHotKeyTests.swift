@@ -23,3 +23,14 @@ private let modifiers = UInt32(controlKey | optionKey | shiftKey | cmdKey)
     #expect(!first.isRegistered)
     #expect(!first.hasHandler)
 }
+
+@MainActor
+@Test func availabilityCheckLeavesNothingRegistered() {
+    let shortcut = Shortcut(keyCode: UInt16(keyCode), modifiers: [.control, .option, .shift, .command])
+    #expect(GlobalHotKey.isAvailable(shortcut))
+    let holder = GlobalHotKey(shortcut) {}
+    holder.register()   // proves the check didn't leave it taken
+    #expect(holder.isRegistered)
+    #expect(!GlobalHotKey.isAvailable(shortcut))
+    holder.unregister()
+}

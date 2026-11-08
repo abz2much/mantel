@@ -243,7 +243,8 @@ final class NotchController {
         guard registeredShortcut != clipboard.shortcut || hotKey?.isRegistered != true else { return }
         hotKey?.unregister()
         let key = GlobalHotKey(clipboard.shortcut) { [weak self] in self?.toggleClipboard() }
-        key.register()   // tried again on the next change if another app owns it now
+        // If another app owns it, this is tried again on every clipboard change, so it starts working once freed.
+        key.register()
         hotKey = key
         registeredShortcut = clipboard.shortcut
         if clipboard.shortcutTaken != !key.isRegistered { clipboard.shortcutTaken = !key.isRegistered }
