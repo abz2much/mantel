@@ -48,10 +48,7 @@ struct HoverPanelView: View {
 
     private var tabBar: some View {
         HStack(spacing: 4) {
-            tabButton(.music, "Music", "music.note")
-            tabButton(.clipboard, "Clipboard", "doc.on.clipboard")
-            tabButton(.today, "Today", "calendar")
-            tabButton(.timer, "Timer", "timer")
+            ForEach(HoverTab.allCases, id: \.self) { tabButton($0, $0.title, $0.icon) }
             Spacer()
         }
     }

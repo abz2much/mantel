@@ -134,7 +134,7 @@ struct Screenshots {
     /// A stand-in for the panel's tab bar (the real one needs live services).
     private func tabs(selected: String) -> some View {
         HStack(spacing: 4) {
-            ForEach([("Music", "music.note"), ("Clipboard", "doc.on.clipboard"), ("Today", "calendar"), ("Timer", "timer")], id: \.0) { title, icon in
+            ForEach(HoverTab.allCases.map { ($0.title, $0.icon) }, id: \.0) { title, icon in
                 Label(title, systemImage: icon)
                     .font(.system(size: 11, weight: .medium))
                     .padding(.horizontal, 10).padding(.vertical, 4)
