@@ -4,26 +4,37 @@ import AppKit
 @MainActor
 final class ClipboardService: ObservableObject {
     private static let enabledKey = "clipboardHistory"
+    private static let shortcutKey = "clipboardShortcut"
     /// macOS has no "clipboard changed" notification; checking its change counter is cheap.
     private static let checkInterval: TimeInterval = 0.5
 
     @Published private(set) var items: [ClipboardItem] = []
     @Published var enabled: Bool {
         didSet {
-            UserDefaults.standard.set(enabled, forKey: Self.enabledKey)
+            defaults.set(enabled, forKey: Self.enabledKey)
             enabled ? startWatching() : stopWatching()
         }
     }
 
+    /// "Open with ⌃⌥V": the shortcut that opens the clipboard panel. Only works while history is on.
+    @Published var shortcutEnabled: Bool {
+        didSet { defaults.set(shortcutEnabled, forKey: Self.shortcutKey) }
+    }
+
+    var opensWithShortcut: Bool { enabled && shortcutEnabled }
+
+    private let defaults: UserDefaults
     private var history = ClipboardHistory()
     private let pasteboard: NSPasteboard
     private var lastChangeCount: Int
     private var timer: Timer?
 
     /// `pasteboard` is the system clipboard except in tests.
-    init(pasteboard: NSPasteboard = .general) {
+    init(pasteboard: NSPasteboard = .general, defaults: UserDefaults = .standard) {
         self.pasteboard = pasteboard
-        enabled = UserDefaults.standard.object(forKey: Self.enabledKey) as? Bool ?? true
+        self.defaults = defaults
+        enabled = defaults.object(forKey: Self.enabledKey) as? Bool ?? true
+        shortcutEnabled = defaults.object(forKey: Self.shortcutKey) as? Bool ?? true
         // Whatever was on the clipboard before Mantel started isn't recorded.
         lastChangeCount = pasteboard.changeCount
     }

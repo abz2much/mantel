@@ -76,6 +76,9 @@ struct SettingsView: View {
             }
             Section("Clipboard") {
                 Toggle("Clipboard history", isOn: $clipboard.enabled)
+                Toggle("Open with ⌃⌥V", isOn: $clipboard.shortcutEnabled)
+                    .padding(.leading, 16)
+                    .disabled(!clipboard.enabled)
                 HStack {
                     Text("Kept in memory only, never saved.").font(.caption).foregroundStyle(.secondary)
                     Spacer()
