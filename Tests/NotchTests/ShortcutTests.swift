@@ -49,7 +49,7 @@ import Testing
 @Test func commandAloneNeedsAnFKey() {
     // ⌘ or ⌘⇧ with a normal key would override app shortcuts like ⌘V and ⌘Q everywhere.
     #expect(!Shortcut(keyCode: UInt16(kVK_ANSI_V), modifiers: [.command]).isAllowed)
-    #expect(!Shortcut(keyCode: UInt16(kVK_ANSI_C), modifiers: [.control, .shift]).isAllowed)
+    #expect(!Shortcut(keyCode: UInt16(kVK_ANSI_C), modifiers: [.command, .shift]).isAllowed)
     #expect(!Shortcut(keyCode: UInt16(kVK_Tab), modifiers: [.command]).isAllowed)
     #expect(Shortcut(keyCode: UInt16(kVK_F5), modifiers: [.command]).isAllowed)
     #expect(Shortcut(keyCode: UInt16(kVK_ANSI_V), modifiers: [.command, .option]).isAllowed)
