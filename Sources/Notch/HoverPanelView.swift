@@ -25,7 +25,10 @@ struct HoverPanelView: View {
                                                    selection: state.clipboardSelection)
                 case .today: TodayView(events: calendar.events, calendarAccess: calendar.hasAccess, onJoin: onJoin,
                                        reminders: reminders.enabled && reminders.hasAccess ? reminders.items : [],
-                                       onComplete: reminders.complete)
+                                       onComplete: reminders.complete,
+                                       remindersOn: reminders.enabled && reminders.hasAccess,
+                                       onAdd: reminders.add,
+                                       typing: $state.typing)
                 case .timer: TimerTabView(timer: timer)
                 }
             }

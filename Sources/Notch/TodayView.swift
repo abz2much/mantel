@@ -8,18 +8,27 @@ struct TodayView: View {
     /// Empty when reminders are off in Settings.
     var reminders: [ReminderItem] = []
     var onComplete: (String) -> Void = { _ in }
+    /// Reminders are on and allowed: show the section (with "Add a reminder") even when nothing is due.
+    var remindersOn = false
+    var onAdd: (String) -> Void = { _ in }
+    /// Set while the "Add a reminder" field has the keyboard, so the panel stays open.
+    var typing: Binding<Bool> = .constant(false)
     @State private var hoveredReminder: String?
+    @State private var draft = ""
+    @FocusState private var fieldFocused: Bool
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let now = context.date
             // Reminders take the room of all but one "later" meeting.
-            let hasReminders = !ReminderAgenda.make(reminders, now: now, max: 1).shown.isEmpty
+            let hasReminders = remindersOn || !ReminderAgenda.make(reminders, now: now, max: 1).shown.isEmpty
             let agenda = Agenda.make(events, now: now, maxLater: hasReminders ? 1 : Agenda.maxLater)
             let meetingRows = (agenda.current == nil ? 0 : 1) + (agenda.next == nil ? 0 : 1) + agenda.later.count
                 + (agenda.moreCount > 0 ? 1 : 0)
-            // Keep within the panel's fixed height: fewer reminders when the meetings list is full.
-            let due = ReminderAgenda.make(reminders, now: now, max: meetingRows == 0 ? 5 : meetingRows >= 4 ? 2 : 3)
+            // Keep within the panel's fixed height: fewer reminders when the meetings list is full,
+            // and one fewer to leave room for "Add a reminder".
+            let room = (meetingRows == 0 ? 5 : meetingRows >= 4 ? 2 : 3) - (remindersOn ? 1 : 0)
+            let due = ReminderAgenda.make(reminders, now: now, max: max(1, room))
             VStack(alignment: .leading, spacing: 10) {
                 if hasReminders, calendarAccess, meetingRows == 0 {
                     Label("No more meetings today", systemImage: "checkmark.circle")
@@ -42,7 +51,32 @@ struct TodayView: View {
             if due.moreCount > 0 {
                 Text("+\(due.moreCount) more").font(.caption2).foregroundStyle(.secondary)
             }
+            if remindersOn { addField }
         }
+    }
+
+    /// Type and press Return to add a reminder due today; Esc cancels.
+    private var addField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "plus.circle")
+                .font(.system(size: 12))
+                .foregroundStyle(MantelStyle.amber)
+            TextField("Add a reminder", text: $draft)
+                .textFieldStyle(.plain)
+                .font(.caption)
+                .focused($fieldFocused)
+                .onSubmit {
+                    onAdd(draft)
+                    draft = ""
+                    fieldFocused = false
+                }
+                .onExitCommand {
+                    draft = ""
+                    fieldFocused = false
+                }
+        }
+        .onChange(of: fieldFocused) { _, focused in typing.wrappedValue = focused }
+        .onDisappear { if typing.wrappedValue { typing.wrappedValue = false } }
     }
 
     private func reminderRow(_ item: ReminderItem, now: Date) -> some View {

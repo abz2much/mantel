@@ -122,7 +122,8 @@ struct Screenshots {
     private func panel(_ tab: HoverTab, events: [MeetingEvent], reminders: [ReminderItem] = []) -> some View {
         VStack(spacing: 8) {
             tabs(selected: tab == .today ? "Today" : "Music")
-            TodayView(events: events, calendarAccess: true, onJoin: { _ in }, reminders: reminders)
+            TodayView(events: events, calendarAccess: true, onJoin: { _ in }, reminders: reminders,
+                      remindersOn: !reminders.isEmpty)
                 .frame(height: HoverPanelView.contentHeight, alignment: .top)
         }
         .padding(.horizontal, 12).padding(.top, 4).padding(.bottom, 8)

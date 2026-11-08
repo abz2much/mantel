@@ -99,6 +99,22 @@ final class RemindersService: ObservableObject {
         }
     }
 
+    /// Adds a reminder due today to the default Reminders list, so it shows in Today straight away.
+    func add(_ typed: String) {
+        guard hasAccess, let title = ReminderAgenda.newTitle(from: typed),
+              let list = store.defaultCalendarForNewReminders() else { return }
+        let reminder = EKReminder(eventStore: store)
+        reminder.title = title
+        reminder.calendar = list
+        reminder.dueDateComponents = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        do {
+            try store.save(reminder, commit: true)
+            refresh()
+        } catch {
+            Self.log.error("couldn't add reminder: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
     /// Marks a reminder done in Apple Reminders.
     func complete(_ id: String) {
         guard let reminder = store.calendarItem(withIdentifier: id) as? EKReminder else { return }

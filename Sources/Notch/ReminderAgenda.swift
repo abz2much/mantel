@@ -35,6 +35,12 @@ struct ReminderAgenda: Equatable {
         return ReminderAgenda(shown: Array(due.prefix(max)), moreCount: Swift.max(0, due.count - max))
     }
 
+    /// What was typed into "Add a reminder", trimmed; nil if there's nothing to add.
+    static func newTitle(from typed: String) -> String? {
+        let title = typed.trimmingCharacters(in: .whitespacesAndNewlines)
+        return title.isEmpty ? nil : title
+    }
+
     static func label(_ item: ReminderItem, now: Date, calendar: Calendar = .current) -> Label {
         guard let due = item.due else { return .today }
         if isOverdue(item, now: now, calendar: calendar) { return .overdue }

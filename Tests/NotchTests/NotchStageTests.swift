@@ -103,3 +103,17 @@ private let insideZone = CGPoint(x: zone.midX, y: zone.midY)
     #expect(!stage.hoverExpanded)
     #expect(!stage.pinned)
 }
+
+@MainActor
+@Test func unpinningCanStayOpenWhileHovered() {
+    let stage = NotchStage(screenID: 2, presenter: FakePresenter(), onHoverExpandedChange: { _ in })
+    stage.pointerMoved(to: insideZone, zone: zone)   // pointer on the panel
+    stage.pin()
+    stage.unpin(stayOpenIfHovered: true)
+    #expect(stage.hoverExpanded)
+    #expect(!stage.pinned)
+    stage.pin()
+    stage.pointerMoved(to: CGPoint(x: 0, y: 0), zone: zone)
+    stage.unpin(stayOpenIfHovered: true)
+    #expect(!stage.hoverExpanded)
+}

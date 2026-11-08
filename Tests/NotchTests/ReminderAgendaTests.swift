@@ -56,3 +56,9 @@ private func item(_ title: String, due: Date?, hasTime: Bool = true) -> Reminder
     #expect(tight.later.count == 1)
     #expect(tight.moreCount == 3)
 }
+
+@Test func typedReminderTitlesAreTidied() {
+    #expect(ReminderAgenda.newTitle(from: "  Buy milk \n") == "Buy milk")
+    #expect(ReminderAgenda.newTitle(from: "   ") == nil)
+    #expect(ReminderAgenda.newTitle(from: "") == nil)
+}
