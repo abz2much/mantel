@@ -53,6 +53,7 @@ final class NotchController {
     private var timer: Timer?
     private var batteryTimer: Timer?
     private var hotKey: GlobalHotKey?
+    private var registeredShortcut: Shortcut?
     private var clipboardCancellable: AnyCancellable?
     private var keyMonitor: Any?
     private var resignObserver: NSObjectProtocol?
@@ -102,8 +103,7 @@ final class NotchController {
                 MainActor.assumeIsolated { self?.evaluate() }
             }
 
-        // ⌃⌥V opens the clipboard panel; registered only while the setting (and history) is on.
-        hotKey = GlobalHotKey.controlOptionV { [weak self] in self?.toggleClipboard() }
+        // The shortcut (⌃⌥V unless changed) opens the clipboard panel; registered only while the setting is on.
         clipboardCancellable = clipboard.objectWillChange.prepend(())
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
@@ -230,8 +230,23 @@ final class NotchController {
 
     // MARK: Clipboard shortcut
 
+    /// Registers the chosen shortcut, re-registering when it changes; tells Settings if another app owns it.
     private func updateHotKey() {
-        if clipboard.opensWithShortcut { hotKey?.register() } else { hotKey?.unregister(); closeClipboard() }
+        guard clipboard.opensWithShortcut else {
+            hotKey?.unregister()
+            hotKey = nil
+            registeredShortcut = nil
+            closeClipboard()
+            if clipboard.shortcutTaken { clipboard.shortcutTaken = false }
+            return
+        }
+        guard registeredShortcut != clipboard.shortcut || hotKey?.isRegistered != true else { return }
+        hotKey?.unregister()
+        let key = GlobalHotKey(clipboard.shortcut) { [weak self] in self?.toggleClipboard() }
+        key.register()   // tried again on the next change if another app owns it now
+        hotKey = key
+        registeredShortcut = clipboard.shortcut
+        if clipboard.shortcutTaken != !key.isRegistered { clipboard.shortcutTaken = !key.isRegistered }
     }
 
     private var pinnedStage: NotchStage? { stages.values.first { $0.pinned } }

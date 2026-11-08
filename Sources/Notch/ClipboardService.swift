@@ -5,6 +5,7 @@ import AppKit
 final class ClipboardService: ObservableObject {
     private static let enabledKey = "clipboardHistory"
     private static let shortcutKey = "clipboardShortcut"
+    private static let shortcutKeysKey = "clipboardShortcutKeys"
     /// macOS has no "clipboard changed" notification; checking its change counter is cheap.
     private static let checkInterval: TimeInterval = 0.5
 
@@ -21,7 +22,17 @@ final class ClipboardService: ObservableObject {
         didSet { defaults.set(shortcutEnabled, forKey: Self.shortcutKey) }
     }
 
-    var opensWithShortcut: Bool { enabled && shortcutEnabled }
+    /// Which keys open it; ⌃⌥V unless changed in Settings.
+    @Published var shortcut: Shortcut {
+        didSet { defaults.set(try? JSONEncoder().encode(shortcut), forKey: Self.shortcutKeysKey) }
+    }
+
+    /// True while Settings is recording a new shortcut, so the old one doesn't fire meanwhile.
+    @Published var recordingShortcut = false
+    /// Set when another app already owns the chosen shortcut, so Settings can say so.
+    @Published var shortcutTaken = false
+
+    var opensWithShortcut: Bool { enabled && shortcutEnabled && !recordingShortcut }
 
     private let defaults: UserDefaults
     private var history = ClipboardHistory()
@@ -35,6 +46,8 @@ final class ClipboardService: ObservableObject {
         self.defaults = defaults
         enabled = defaults.object(forKey: Self.enabledKey) as? Bool ?? true
         shortcutEnabled = defaults.object(forKey: Self.shortcutKey) as? Bool ?? true
+        shortcut = (defaults.data(forKey: Self.shortcutKeysKey)).flatMap { try? JSONDecoder().decode(Shortcut.self, from: $0) }
+            ?? .default
         // Whatever was on the clipboard before Mantel started isn't recorded.
         lastChangeCount = pasteboard.changeCount
     }

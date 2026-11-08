@@ -9,9 +9,8 @@ final class GlobalHotKey {
     private var hotKey: EventHotKeyRef?
     private var handler: EventHandlerRef?
 
-    /// ⌃⌥V.
-    static func controlOptionV(_ action: @escaping () -> Void) -> GlobalHotKey {
-        GlobalHotKey(keyCode: UInt32(kVK_ANSI_V), modifiers: UInt32(controlKey | optionKey), action: action)
+    convenience init(_ shortcut: Shortcut, action: @escaping () -> Void) {
+        self.init(keyCode: UInt32(shortcut.keyCode), modifiers: shortcut.carbonModifiers, action: action)
     }
 
     init(keyCode: UInt32, modifiers: UInt32, action: @escaping () -> Void) {
