@@ -49,14 +49,19 @@ private let insideZone = CGPoint(x: zone.midX, y: zone.midY)
 @MainActor
 @Test func hoverZoneStartsHoverAfterDwell() async throws {
     var changes: [Bool] = []
-    let stage = NotchStage(screenID: 2, presenter: FakePresenter(), onHoverExpandedChange: { changes.append($0) })
+    var openedAfter: Duration?
+    let moved = ContinuousClock.now
+    let stage = NotchStage(screenID: 2, presenter: FakePresenter(), onHoverExpandedChange: {
+        if $0 { openedAfter = ContinuousClock.now - moved }
+        changes.append($0)
+    })
     stage.desired = .hidden
     stage.pointerMoved(to: insideZone, zone: zone)
     #expect(!stage.hoverExpanded)
-    try await Task.sleep(for: .milliseconds(150))
-    #expect(!stage.hoverExpanded)   // still waiting out the 0.3 s dwell
     #expect(await eventually { stage.hoverExpanded })
     #expect(changes == [true])
+    // Measured, not slept: a busy test machine can't make this pass or fail by accident.
+    #expect(openedAfter.map { $0 >= .milliseconds(300) } == true)   // waited out the 0.3 s dwell
 }
 
 @MainActor
@@ -65,10 +70,11 @@ private let insideZone = CGPoint(x: zone.midX, y: zone.midY)
     stage.desired = .hidden
     stage.pointerMoved(to: insideZone, zone: zone)
     #expect(await eventually { stage.hoverExpanded })
+    let left = ContinuousClock.now
     stage.pointerMoved(to: CGPoint(x: 0, y: 0), zone: zone)
-    try await Task.sleep(for: .milliseconds(250))
-    #expect(stage.hoverExpanded)   // still within the 0.5 s leave delay
+    #expect(stage.hoverExpanded)
     #expect(await eventually { !stage.hoverExpanded })
+    #expect(ContinuousClock.now - left >= .milliseconds(500))   // stayed open for the 0.5 s leave delay
 }
 
 @Test func screensRebuiltOnDisplayChange() {
