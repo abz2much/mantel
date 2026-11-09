@@ -2,7 +2,7 @@
 
 This is for anyone working on Mantel's code. The [README](../README.md) covers installing and using the app.
 
-Mantel used to be called Notch, so the Swift package and the program inside the app still use that name. The repository was renamed from `notch` to `mantel`; GitHub redirects the old name, so never create a new repository called `notch` on this account. The app's ID, `local.notch.app`, also stays as it is. Changing it would reset everyone's permissions and stop installed copies from accepting updates.
+Don't change the app's ID, `local.mantel.app`. Changing it resets the app's permissions and stops installed copies from accepting updates. The repository was renamed from `notch`, and GitHub redirects the old name, so never create a new repository called `notch` on this account.
 
 ## Building and testing
 
@@ -14,15 +14,15 @@ swift test
 ./build.sh
 ```
 
-The tests that talk to GitHub or need a signed build are skipped unless you ask for them. They're described at the top of `Tests/NotchTests/UpdateEndToEndTests.swift`.
+The tests that talk to GitHub or need a signed build are skipped unless you ask for them. They're described at the top of `Tests/MantelTests/UpdateEndToEndTests.swift`.
 
 ## Trying things without the real thing
 
-A couple of environment variables let you see features without setting them up for real. `NOTCH_FAKE_SPOTIFY=1` plays a made-up song instead of talking to Spotify, and `NOTCH_FAKE_BATTERY=1` pretends you plugged in and then dropped to 20%.
+A couple of environment variables let you see features without setting them up for real. `MANTEL_FAKE_SPOTIFY=1` plays a made-up song instead of talking to Spotify, and `MANTEL_FAKE_BATTERY=1` pretends you plugged in and then dropped to 20%.
 
 ```sh
-NOTCH_FAKE_SPOTIFY=1 build/Mantel.app/Contents/MacOS/Notch
-NOTCH_FAKE_BATTERY=1 build/Mantel.app/Contents/MacOS/Notch
+MANTEL_FAKE_SPOTIFY=1 build/Mantel.app/Contents/MacOS/Mantel
+MANTEL_FAKE_BATTERY=1 build/Mantel.app/Contents/MacOS/Mantel
 ```
 
 ## Screenshots and icons
@@ -30,10 +30,10 @@ NOTCH_FAKE_BATTERY=1 build/Mantel.app/Contents/MacOS/Notch
 The README screenshots are drawn from the app's own views with made-up data. After changing how something looks, regenerate them with:
 
 ```sh
-NOTCH_FAKE_SPOTIFY=1 NOTCH_SCREENSHOTS_DIR=docs/images swift test --filter Screenshots
+MANTEL_FAKE_SPOTIFY=1 MANTEL_SCREENSHOTS_DIR=docs/images swift test --filter Screenshots
 ```
 
-The app icon is drawn in code. Run `swift scripts/make-app-icon.swift` from the repository root to rebuild `Resources/AppIcon.icns` and the preview in `docs/images/app-icon.png`. The menu bar icon is drawn in `Sources/Notch/MenuBarIcon.swift`.
+The app icon is drawn in code. Run `swift scripts/make-app-icon.swift` from the repository root to rebuild `Resources/AppIcon.icns` and the preview in `docs/images/app-icon.png`. The menu bar icon is drawn in `Sources/Mantel/MenuBarIcon.swift`.
 
 ## Releasing
 
@@ -43,6 +43,6 @@ If a run fails before publishing, nothing has been released, so fix the problem 
 
 ## Signing
 
-Every release is signed with the same self-signed certificate. That's what lets macOS keep Mantel's permissions across updates, and it's how an installed copy knows an update really came from here. The workflow reads the certificate from two repository secrets, `NOTCH_SIGNING_P12` (the .p12 file, base64 encoded) and `NOTCH_SIGNING_PASSWORD`, and checks that the build is signed by the certificate with SHA-1 `19180d694e220d1d49ea3447a26528fcd16f1530`.
+Every release is signed with the same self-signed certificate. That's what lets macOS keep Mantel's permissions across updates, and it's how an installed copy knows an update really came from here. The workflow reads the certificate from two repository secrets, `MANTEL_SIGNING_P12` (the .p12 file, base64 encoded) and `MANTEL_SIGNING_PASSWORD`, and checks that the build is signed by the certificate with SHA-1 `e860aba5c846e315bae3f058b509d31c776ba0d7`.
 
 Don't replace that certificate. Installed copies only accept updates signed with it, so a new one would mean everyone reinstalling by hand and allowing permissions again. Local builds made with `./build.sh` are signed ad hoc and never update themselves.
