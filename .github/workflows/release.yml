@@ -56,11 +56,11 @@ jobs:
       # permissions across updates and the app can check an update really came from here.
       - name: Load the signing certificate
         env:
-          P12: ${{ secrets.NOTCH_SIGNING_P12 }}
-          P12_PASSWORD: ${{ secrets.NOTCH_SIGNING_PASSWORD }}
+          P12: ${{ secrets.MANTEL_SIGNING_P12 }}
+          P12_PASSWORD: ${{ secrets.MANTEL_SIGNING_PASSWORD }}
         run: |
           if [[ -z "$P12" || -z "$P12_PASSWORD" ]]; then
-            echo "::error::The NOTCH_SIGNING_P12 and NOTCH_SIGNING_PASSWORD secrets aren't set"; exit 1
+            echo "::error::The MANTEL_SIGNING_P12 and MANTEL_SIGNING_PASSWORD secrets aren't set"; exit 1
           fi
           KC="$RUNNER_TEMP/signing.keychain-db"
           KC_PASS="$(uuidgen)"
@@ -74,17 +74,17 @@ jobs:
           # Older codesign (Xcode 16) only finds identities in keychains on the search list, even with
           # --keychain. Deleting the keychain at the end also takes it off the list.
           security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
-          security find-identity -p codesigning "$KC" | grep -q 19180D694E220D1D49EA3447A26528FCD16F1530 \
+          security find-identity -p codesigning "$KC" | grep -q E860ABA5C846E315BAE3F058B509D31C776BA0D7 \
             || { echo "::error::The signing certificate in the secrets isn't Mantel's release certificate"; exit 1; }
-          echo "NOTCH_KEYCHAIN=$KC" >> "$GITHUB_ENV"
+          echo "MANTEL_KEYCHAIN=$KC" >> "$GITHUB_ENV"
 
       - name: Build the app (Apple Silicon and Intel)
         env:
-          NOTCH_UNIVERSAL: "1"
-          NOTCH_VERSION: ${{ inputs.version }}
-          NOTCH_BUILD: ${{ github.run_number }}
+          MANTEL_UNIVERSAL: "1"
+          MANTEL_VERSION: ${{ inputs.version }}
+          MANTEL_BUILD: ${{ github.run_number }}
           # The release certificate's SHA-1, so exactly that certificate is used.
-          NOTCH_SIGN_IDENTITY: 19180D694E220D1D49EA3447A26528FCD16F1530
+          MANTEL_SIGN_IDENTITY: E860ABA5C846E315BAE3F058B509D31C776BA0D7
         run: ./build.sh
 
       # Installed copies only accept updates signed by this exact certificate (SHA-1 of the leaf).
@@ -92,7 +92,7 @@ jobs:
       - name: Check it's signed with the release certificate
         run: |
           codesign -dr - build/Mantel.app 2>&1 \
-            | grep -qF 'certificate leaf = H"19180d694e220d1d49ea3447a26528fcd16f1530"' \
+            | grep -qF 'certificate leaf = H"e860aba5c846e315bae3f058b509d31c776ba0d7"' \
             || { echo "::error::App isn't signed with Mantel's release certificate"; exit 1; }
 
       - name: Zip it
@@ -102,12 +102,12 @@ jobs:
       # the top of the zip, its ID, its version, and the release certificate's signature.
       - name: Check the zip will be accepted as an update
         run: |
-          REQ='identifier "local.notch.app" and certificate leaf = H"19180d694e220d1d49ea3447a26528fcd16f1530"'
+          REQ='identifier "local.mantel.app" and certificate leaf = H"e860aba5c846e315bae3f058b509d31c776ba0d7"'
           for pair in "Mantel-$VERSION.zip:Mantel.app"; do
             ZIP="${pair%%:*}"; APP="${pair##*:}"; DIR="check-${APP%.app}"
             ditto -x -k "$ZIP" "$DIR"
             PLIST="$DIR/$APP/Contents/Info.plist"
-            [[ "$(plutil -extract CFBundleIdentifier raw "$PLIST")" == "local.notch.app" ]] || { echo "::error::$ZIP: wrong app ID"; exit 1; }
+            [[ "$(plutil -extract CFBundleIdentifier raw "$PLIST")" == "local.mantel.app" ]] || { echo "::error::$ZIP: wrong app ID"; exit 1; }
             [[ "$(plutil -extract CFBundleShortVersionString raw "$PLIST")" == "$VERSION" ]] || { echo "::error::$ZIP: wrong version"; exit 1; }
             codesign --verify --strict -R="$REQ" "$DIR/$APP" || { echo "::error::$ZIP: not signed by the release certificate"; exit 1; }
             echo "$ZIP ok"

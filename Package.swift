@@ -2,17 +2,17 @@
 import PackageDescription
 
 let package = Package(
-    name: "Notch",
+    name: "Mantel",
     platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(
-            name: "Notch",
-            path: "Sources/Notch"
+            name: "Mantel",
+            path: "Sources/Mantel"
         ),
         .testTarget(
-            name: "NotchTests",
-            dependencies: ["Notch"],
-            path: "Tests/NotchTests"
+            name: "MantelTests",
+            dependencies: ["Mantel"],
+            path: "Tests/MantelTests"
         )
     ]
 )
