@@ -3,10 +3,10 @@ import os
 
 /// Keeps an installed Mantel up to date from the GitHub releases.
 ///
-/// The repo is private, so downloads go through the GitHub command line tool (`gh`) and the user's own
-/// login. A download is installed only if it's a newer version signed with the same certificate as the
-/// running app. Files fetched by `gh` aren't marked as downloaded from the internet, so there's no
-/// "Open Anyway" step, and the unchanged signature means macOS keeps Mantel's permissions.
+/// The repo is public, so it asks GitHub for the latest release and downloads the zip over plain HTTPS,
+/// with no login. A download is installed only if it's a newer version signed with the same certificate
+/// as the running app. Files Mantel downloads itself aren't marked as downloaded from the internet, so
+/// there's no "Open Anyway" step, and the unchanged signature means macOS keeps Mantel's permissions.
 @MainActor
 final class UpdateService: ObservableObject {
     enum Status: Equatable {
@@ -23,7 +23,6 @@ final class UpdateService: ObservableObject {
 
     private static let log = Logger(subsystem: "local.mantel.app", category: "update")
     private static let autoKey = "autoUpdate"
-    nonisolated private static let repo = "abz2much/mantel"
     private static let checkEvery: TimeInterval = 6 * 3600
     private static let firstCheckAfter: TimeInterval = 60
 
@@ -67,29 +66,24 @@ final class UpdateService: ObservableObject {
         if UpdateVerifier.ownRequirement() == nil {
             return "This copy isn't a signed release; install the latest release once by hand"
         }
-        if UpdateRules.ghPath() == nil {
-            return "Updates need the GitHub CLI (gh)"
-        }
         if currentVersion == nil { return "Unknown version" }
         return nil
     }
 
     private func check(install: Bool) {
         if let reason = blocker() { status = .unavailable(reason); return }
-        guard !busy, let gh = UpdateRules.ghPath(), let current = currentVersion,
+        guard !busy, let current = currentVersion,
               let requirement = UpdateVerifier.ownRequirement() else { return }
         busy = true
         status = .checking
         let appURL = Bundle.main.bundleURL
         Task {
-            let result = await Task.detached { () -> Result<AppVersion?, UpdateError> in
+            let result = await Task.detached { () async -> Result<AppVersion?, UpdateError> in
                 do {
-                    let tag = try Self.run(gh, ["api", "repos/\(Self.repo)/releases/latest", "--jq", ".tag_name"])
-                        .trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard let latest = AppVersion(tag: tag) else { throw UpdateError("Couldn't read the latest release") }
+                    let latest = try await Self.latestVersion(session: Self.session)
                     guard latest > current else { return .success(nil) }
                     guard install else { return .success(latest) }
-                    try Self.install(latest, gh: gh, appURL: appURL, requirement: requirement)
+                    try await Self.install(latest, session: Self.session, appURL: appURL, requirement: requirement)
                     return .success(latest)
                 } catch let error as UpdateError {
                     return .failure(error)
@@ -123,18 +117,56 @@ final class UpdateService: ObservableObject {
         init(_ message: String) { self.message = message }
     }
 
+    /// Plain HTTPS with nothing kept between runs. Gives up on a stalled request after 30 seconds
+    /// and on a whole download after 2 minutes; the next scheduled check tries again.
+    nonisolated static let session: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 120
+        return URLSession(configuration: config)
+    }()
+
+    /// The newest release on GitHub.
+    nonisolated static func latestVersion(session: URLSession) async throws -> AppVersion {
+        var request = URLRequest(url: UpdateRules.latestReleaseURL)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await fromGitHub { try await session.data(for: request) }
+        try check(response)
+        guard let latest = UpdateRules.latestVersion(fromReleaseJSON: data) else {
+            throw UpdateError("Couldn't read the latest release")
+        }
+        return latest
+    }
+
     /// Downloads the release zip, unpacks it, checks it, and swaps it in for the running app.
-    nonisolated static func install(_ version: AppVersion, gh: String, appURL: URL, requirement: String,
-                                    bundleID: String? = Bundle.main.bundleIdentifier) throws {
+    nonisolated static func install(_ version: AppVersion, session: URLSession, appURL: URL, requirement: String,
+                                    bundleID: String? = Bundle.main.bundleIdentifier) async throws {
         let fm = FileManager.default
         // A scratch folder on the same disk as the app, so the final swap is a quick rename.
         let work = try fm.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: appURL, create: true)
         defer { try? fm.removeItem(at: work) }
 
-        let zipName = UpdateRules.zipName(version)
-        _ = try run(gh, ["release", "download", "v\(version)", "--repo", repo, "--pattern", zipName, "--dir", work.path])
-        try installZip(work.appendingPathComponent(zipName), version: version, appURL: appURL,
-                       requirement: requirement, bundleID: bundleID, work: work)
+        let (downloaded, response) = try await fromGitHub { try await session.download(from: UpdateRules.downloadURL(version)) }
+        // Into the scratch folder straight away, so it's cleaned up whatever happens next.
+        let zip = work.appendingPathComponent(UpdateRules.zipName(version))
+        try fm.moveItem(at: downloaded, to: zip)
+        // The release was just found, so a missing file means the zip itself isn't attached.
+        try check(response, notFound: "The release has no Mantel download")
+        try installZip(zip, version: version, appURL: appURL, requirement: requirement, bundleID: bundleID, work: work)
+    }
+
+    /// Turns a reply that isn't a success into a message for the menu.
+    nonisolated private static func check(_ response: URLResponse, notFound: String? = nil) throws {
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if status == 404, let notFound { throw UpdateError(notFound) }
+        if let message = UpdateRules.failureMessage(httpStatus: status) { throw UpdateError(message) }
+    }
+
+    /// Turns network errors (offline, timed out) into a message for the menu.
+    nonisolated private static func fromGitHub<T>(_ body: () async throws -> T) async throws -> T {
+        do { return try await body() } catch let error as URLError {
+            throw UpdateError(UpdateRules.failureMessage(urlError: error))
+        }
     }
 
     /// Unpacks a release zip, checks it's the right app, version and signer, then swaps it in for `appURL`.
@@ -188,10 +220,8 @@ final class UpdateService: ObservableObject {
         let data = out.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
         watchdog.cancel()
-        if timedOut.isSet { throw UpdateError(path.hasSuffix("/gh") ? "Timed out talking to GitHub" : "Timed out unpacking the update") }
-        guard process.terminationStatus == 0 else {
-            throw UpdateError(path.hasSuffix("/gh") ? "GitHub CLI failed (signed in? run: gh auth status)" : "Couldn't unpack the update")
-        }
+        if timedOut.isSet { throw UpdateError("Timed out unpacking the update") }
+        guard process.terminationStatus == 0 else { throw UpdateError("Couldn't unpack the update") }
         return String(decoding: data, as: UTF8.self)
     }
 
