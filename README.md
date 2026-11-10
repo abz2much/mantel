@@ -44,7 +44,7 @@ Mantel adds itself to your login items the first time it runs, so it starts when
 
 ### Updates
 
-Mantel keeps itself up to date. It checks for new versions in the background, installs them and reopens, and your permissions carry over. Because this repository is private, it downloads updates through the GitHub command line tool, so you'll need that installed and signed in. Run `brew install gh` and then `gh auth login` once. You can also check by hand at any time from the menu.
+Mantel keeps itself up to date. It checks this repository's releases in the background, installs new versions and reopens, and your permissions carry over. No GitHub account is needed. You can also check by hand at any time from the menu.
 
 ## Settings
 
@@ -54,7 +54,7 @@ In Settings you can choose whether Mantel opens at login and installs updates au
 
 ## Privacy
 
-Mantel only reads your calendar and never edits it. Reminders are off until you turn them on. Mantel then reads them, and only changes them when you tick one off or add one. It talks to Spotify and Music only while they're already open, and it never launches them. Clipboard history stays in memory, so it's gone when Mantel quits, and anything a password manager marks as private is skipped. Album art is off by default. When you turn it on, Spotify covers come from Spotify's image server and Apple Music covers come from the Music app itself. Nothing else leaves your Mac, and song titles are never written to logs.
+Mantel only reads your calendar and never edits it. Reminders are off until you turn them on. Mantel then reads them, and only changes them when you tick one off or add one. It talks to Spotify and Music only while they're already open, and it never launches them. Clipboard history stays in memory, so it's gone when Mantel quits, and anything a password manager marks as private is skipped. Album art is off by default. When you turn it on, Spotify covers come from Spotify's image server and Apple Music covers come from the Music app itself. Update checks ask GitHub for the latest release, which shares your IP address with GitHub like any download. Nothing else leaves your Mac, and song titles are never written to logs.
 
 ## Troubleshooting
 
@@ -65,8 +65,6 @@ xattr -dr com.apple.quarantine /Applications/Mantel.app
 ```
 
 If you said no to a permission by mistake, a warning appears in Mantel's menu with a button that takes you to the right page in System Settings.
-
-If the menu says updates need the GitHub CLI, install it with `brew install gh` and sign in with `gh auth login`.
 
 ## Building it yourself
 
@@ -80,3 +78,6 @@ cd mantel
 
 That produces `build/Mantel.app`. Testing, debugging tricks and how releases work are covered in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
+## Licence
+
+MIT. See [LICENSE](LICENSE).

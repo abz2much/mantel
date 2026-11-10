@@ -2,36 +2,26 @@ import Foundation
 import Testing
 @testable import Mantel
 
-/// Downloads the latest real release with the `gh` login and installs it over a throwaway copy,
+/// Downloads the latest real release from the public repo and installs it over a throwaway copy,
 /// never the real app. Only runs when asked:
 ///   MANTEL_UPDATE_E2E=1 swift test --filter UpdateEndToEnd
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["MANTEL_UPDATE_E2E"] == "1"))
 struct UpdateEndToEnd {
     static let releaseRequirement = #"identifier "local.mantel.app" and certificate leaf = H"e860aba5c846e315bae3f058b509d31c776ba0d7""#
 
-    @Test func installsTheLatestRelease() throws {
-        let gh = try #require(UpdateRules.ghPath())
-        let latest = try #require(Self.latestVersion(gh))
+    @Test func installsTheLatestRelease() async throws {
+        let latest = try await UpdateService.latestVersion(session: UpdateService.session)
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("notch-e2e-\(UUID().uuidString)")
         let target = dir.appendingPathComponent(UpdateRules.appName)
         try FileManager.default.createDirectory(at: target.appendingPathComponent("Contents"), withIntermediateDirectories: true)
         try PropertyListSerialization.data(fromPropertyList: ["CFBundleIdentifier": "local.mantel.app"], format: .xml, options: 0)
             .write(to: target.appendingPathComponent("Contents/Info.plist"))
 
-        try UpdateService.install(latest, gh: gh, appURL: target, requirement: Self.releaseRequirement, bundleID: "local.mantel.app")
+        try await UpdateService.install(latest, session: UpdateService.session, appURL: target,
+                                        requirement: Self.releaseRequirement, bundleID: "local.mantel.app")
 
         #expect(UpdateService.infoPlist(target)?["CFBundleShortVersionString"] as? String == latest.description)
         #expect(UpdateVerifier.satisfies(target, requirement: Self.releaseRequirement))
-    }
-
-    static func latestVersion(_ gh: String) -> AppVersion? {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: gh)
-        p.arguments = ["api", "repos/abz2much/mantel/releases/latest", "--jq", ".tag_name"]
-        let out = Pipe(); p.standardOutput = out
-        try? p.run(); p.waitUntilExit()
-        let tag = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-        return AppVersion(tag: tag.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 }
 

@@ -3,7 +3,7 @@ import Testing
 @testable import Mantel
 
 /// A zipped Mantel.app with the given ID and version, ad-hoc signed, in a fresh temp folder.
-private func zippedApp(id: String, version: String) throws -> (zip: URL, dir: URL) {
+func zippedApp(id: String, version: String) throws -> (zip: URL, dir: URL) {
     let fm = FileManager.default
     let dir = fm.temporaryDirectory.appendingPathComponent("notch-install-\(UUID().uuidString)")
     let app = dir.appendingPathComponent("src/Mantel.app/Contents")
@@ -24,7 +24,7 @@ private func zippedApp(id: String, version: String) throws -> (zip: URL, dir: UR
 }
 
 /// The "installed" copy: a minimal Notch bundle plus a marker file to show whether it was replaced.
-private func target(in dir: URL) throws -> URL {
+func installedCopy(in dir: URL) throws -> URL {
     let app = dir.appendingPathComponent("installed/Mantel.app")
     try FileManager.default.createDirectory(at: app.appendingPathComponent("Contents"), withIntermediateDirectories: true)
     try PropertyListSerialization.data(fromPropertyList: ["CFBundleIdentifier": "local.mantel.app"], format: .xml, options: 0)
@@ -42,7 +42,7 @@ private func install(_ zip: URL, version: AppVersion, over app: URL, dir: URL) t
 
 @Test func refusesAnUpdateWhoseVersionDoesntMatchTheRelease() throws {
     let (zip, dir) = try zippedApp(id: "local.mantel.app", version: "1.0.0")
-    let app = try target(in: dir)
+    let app = try installedCopy(in: dir)
     let error = #expect(throws: UpdateService.UpdateError.self) { try install(zip, version: AppVersion(2, 0, 0), over: app, dir: dir) }
     #expect(error?.message == "The download isn't the expected Mantel version")
     #expect(FileManager.default.fileExists(atPath: app.appendingPathComponent("original").path))
@@ -50,7 +50,7 @@ private func install(_ zip: URL, version: AppVersion, over app: URL, dir: URL) t
 
 @Test func refusesADifferentApp() throws {
     let (zip, dir) = try zippedApp(id: "com.example.other", version: "2.0.0")
-    let app = try target(in: dir)
+    let app = try installedCopy(in: dir)
     let error = #expect(throws: UpdateService.UpdateError.self) { try install(zip, version: AppVersion(2, 0, 0), over: app, dir: dir) }
     #expect(error?.message == "The download isn't the expected Mantel version")
     #expect(FileManager.default.fileExists(atPath: app.appendingPathComponent("original").path))
@@ -65,7 +65,7 @@ private func install(_ zip: URL, version: AppVersion, over app: URL, dir: URL) t
 
 @Test func installsAMatchingUpdateWithOnlyItsOwnFiles() throws {
     let (zip, dir) = try zippedApp(id: "local.mantel.app", version: "2.0.0")
-    let app = try target(in: dir)
+    let app = try installedCopy(in: dir)
     try install(zip, version: AppVersion(2, 0, 0), over: app, dir: dir)
     #expect(UpdateService.infoPlist(app)?["CFBundleShortVersionString"] as? String == "2.0.0")
     #expect(!FileManager.default.fileExists(atPath: app.appendingPathComponent("original").path))

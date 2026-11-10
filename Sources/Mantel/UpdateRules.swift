@@ -33,15 +33,35 @@ enum UpdateRules {
         return folder == "/Applications" || folder == home.appendingPathComponent("Applications").standardizedFileURL.path
     }
 
-    /// The GitHub command line tool, which can download from the private repo with the user's own login.
-    /// Apps opened from Finder don't get the shell's PATH, so the usual install places are checked.
-    static let ghCandidates = ["/opt/homebrew/bin/gh", "/usr/local/bin/gh"]
-
-    static func ghPath(exists: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) }) -> String? {
-        ghCandidates.first(where: exists)
-    }
-
     /// The app's file name, and its release download.
     static let appName = "Mantel.app"
     static func zipName(_ version: AppVersion) -> String { "Mantel-\(version).zip" }
+
+    /// The public GitHub repo the releases come from. No login is needed to read them.
+    static let repo = "abz2much/mantel"
+    static let latestReleaseURL = URL(string: "https://api.github.com/repos/\(repo)/releases/latest")!
+    static func downloadURL(_ version: AppVersion) -> URL {
+        URL(string: "https://github.com/\(repo)/releases/download/v\(version)/\(zipName(version))")!
+    }
+
+    /// The version in GitHub's latest-release reply, if it's a plain X.Y.Z tag.
+    static func latestVersion(fromReleaseJSON data: Data) -> AppVersion? {
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let tag = object["tag_name"] as? String else { return nil }
+        return AppVersion(tag: tag)
+    }
+
+    /// What to show for a reply from GitHub that isn't a success; nil when it is.
+    static func failureMessage(httpStatus: Int) -> String? {
+        switch httpStatus {
+        case 200: return nil
+        case 404: return "No release found on GitHub"
+        case 403, 429: return "GitHub is busy, will try again later"
+        default: return "GitHub returned an error (\(httpStatus))"
+        }
+    }
+
+    static func failureMessage(urlError: URLError) -> String {
+        urlError.code == .timedOut ? "Timed out talking to GitHub" : "Couldn't reach GitHub"
+    }
 }

@@ -29,11 +29,28 @@ import Testing
     #expect(!UpdateRules.canSelfUpdate(appURL: URL(fileURLWithPath: "/Users/someone/Downloads/Mantel.app"), home: home))
 }
 
-@Test func findsTheGitHubCommandLineTool() {
-    let found = UpdateRules.ghPath(exists: { $0 == "/usr/local/bin/gh" })
-    #expect(found == "/usr/local/bin/gh")
-    #expect(UpdateRules.ghPath(exists: { _ in true }) == "/opt/homebrew/bin/gh")
-    #expect(UpdateRules.ghPath(exists: { _ in false }) == nil)
+@Test func publicReleaseURLs() {
+    #expect(UpdateRules.latestReleaseURL.absoluteString == "https://api.github.com/repos/abz2much/mantel/releases/latest")
+    #expect(UpdateRules.downloadURL(AppVersion(2, 1, 0)).absoluteString
+            == "https://github.com/abz2much/mantel/releases/download/v2.1.0/Mantel-2.1.0.zip")
+}
+
+@Test func readsTagFromReleaseJSON() {
+    #expect(UpdateRules.latestVersion(fromReleaseJSON: Data(#"{"tag_name":"v2.1.0","name":"x"}"#.utf8)) == AppVersion(2, 1, 0))
+    #expect(UpdateRules.latestVersion(fromReleaseJSON: Data(#"{"name":"x"}"#.utf8)) == nil)
+    #expect(UpdateRules.latestVersion(fromReleaseJSON: Data(#"{"tag_name":"v2.1.0-beta"}"#.utf8)) == nil)
+    #expect(UpdateRules.latestVersion(fromReleaseJSON: Data(#"{"tag_name":2}"#.utf8)) == nil)
+    #expect(UpdateRules.latestVersion(fromReleaseJSON: Data("<html>".utf8)) == nil)
+}
+
+@Test func httpMessagesForFailures() {
+    #expect(UpdateRules.failureMessage(httpStatus: 200) == nil)
+    #expect(UpdateRules.failureMessage(httpStatus: 404) == "No release found on GitHub")
+    #expect(UpdateRules.failureMessage(httpStatus: 403) == "GitHub is busy, will try again later")
+    #expect(UpdateRules.failureMessage(httpStatus: 429) == "GitHub is busy, will try again later")
+    #expect(UpdateRules.failureMessage(httpStatus: 500) == "GitHub returned an error (500)")
+    #expect(UpdateRules.failureMessage(urlError: URLError(.timedOut)) == "Timed out talking to GitHub")
+    #expect(UpdateRules.failureMessage(urlError: URLError(.notConnectedToInternet)) == "Couldn't reach GitHub")
 }
 
 
